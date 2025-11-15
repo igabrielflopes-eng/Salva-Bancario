@@ -1,3 +1,5 @@
+
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -618,1207 +620,495 @@ const styles = `
     body.modal-open .modal-backdrop {
       position: static !important;
       display: block !important;
-      background: none !important;
-      width: 100% !important;
-      height: auto !important;
     }
-    body.modal-open .modal-content {
-      box-shadow: none !important;
-      border: none !important;
-      padding: 0 !important;
-      width: 100% !important;
-      max-width: 100% !important;
-      max-height: none !important;
-      overflow-y: visible !important;
+
+    .modal-content {
+      max-height: none;
+      overflow: visible;
+      box-shadow: none;
+      border: 1px solid #ccc;
+      width: 100%;
+    }
+
+    .modal-header {
+      display: none;
     }
   }
-
+  
   @media (max-width: 900px) {
     .calculator-layout {
       grid-template-columns: 1fr;
     }
   }
-   @media (max-width: 600px) {
-    .results-summary {
-      grid-template-columns: 1fr;
+
+  @media (max-width: 600px) {
+    .app-container {
+      padding: 10px;
     }
+
     .header h1 {
       font-size: 2rem;
     }
-   }
+    
+    .form-group.inline {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .form-group.inline > button {
+      height: auto;
+      margin-top: 10px;
+    }
+
+    .results-summary {
+      grid-template-columns: 1fr;
+    }
+    
+    .indicators-grid {
+      grid-template-columns: 1fr;
+    }
+    
+    table {
+        border: 0;
+    }
+
+    table thead {
+        border: none;
+        clip: rect(0 0 0 0);
+        height: 1px;
+        margin: -1px;
+        overflow: hidden;
+        padding: 0;
+        position: absolute;
+        width: 1px;
+    }
+    
+    table tr {
+        border-bottom: 3px solid var(--border-color);
+        display: block;
+        margin-bottom: .625em;
+        background-color: var(--background-color);
+        border-radius: 8px;
+        padding: 15px;
+    }
+    
+    table td {
+        border-bottom: 1px solid #ddd;
+        display: block;
+        font-size: .8em;
+        text-align: right;
+        padding: 10px 0;
+    }
+    
+    table td::before {
+        content: attr(data-label);
+        float: left;
+        font-weight: bold;
+        text-transform: uppercase;
+        color: var(--primary-color);
+    }
+    
+    table td:last-child {
+        border-bottom: 0;
+    }
+  }
 `;
 
-type AmortizationType = 'price' | 'sac';
-type Calculation = {
-  id: number;
-  type: string;
-  description: string;
-  data: any;
-};
-
-interface AmortizationRow {
-  month: number;
-  installment: number;
-  interest: number;
-  amortization: number;
-  balance: number;
-}
-
-interface RuralAmortizationRow {
-  period: string;
-  installment: number;
-  interest: number;
-  amortization: number;
-  balance: number;
-}
-
-const formatCurrency = (value: number) => {
+const formatCurrency = (value) => {
+  if (isNaN(value) || value === null) return 'R$ 0,00';
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
     currency: 'BRL',
   }).format(value);
 };
 
-const LoanCalculator = ({ onBack, onSave }: { onBack: () => void, onSave: (calc: Omit<Calculation, 'id'>) => void }) => {
-  const [amount, setAmount] = useState('100000,00');
-  const [rate, setRate] = useState('1');
-  const [term, setTerm] = useState('360');
-  const [amortizationType, setAmortizationType] = useState<AmortizationType>('price');
-  const [calculateIof, setCalculateIof] = useState(false);
-  const [financeIof, setFinanceIof] = useState(false);
-  const [results, setResults] = useState<{ table: AmortizationRow[], totalInterest: number, totalPaid: number, calculatedIof: number, lastInstallment?: number } | null>(null);
-
-  const resetForm = () => {
-    setAmount('100000,00');
-    setRate('1');
-    setTerm('360');
-    setAmortizationType('price');
-    setCalculateIof(false);
-    setFinanceIof(false);
-    setResults(null);
-  };
-
-  const calculateLoan = () => {
-    const loanAmount = parseFloat(amount.replace(',', '.'));
-    const monthlyRate = parseFloat(rate) / 100;
-    const loanTerm = parseInt(term, 10);
-
-    if (isNaN(loanAmount) || isNaN(monthlyRate) || isNaN(loanTerm) || loanAmount <= 0 || monthlyRate <= 0 || loanTerm <= 0) {
-      setResults(null);
-      return;
-    }
-
-    let totalIof = 0;
-    if (calculateIof) {
-        const iofFixed = loanAmount * 0.0038;
-        const daysForIof = Math.min(loanTerm * 30, 365);
-        const iofDaily = loanAmount * 0.000082 * daysForIof;
-        totalIof = iofFixed + iofDaily;
-    }
-
-    const principal = financeIof ? loanAmount + totalIof : loanAmount;
-
-    const table: AmortizationRow[] = [];
-    let balance = principal;
-    let totalInterest = 0;
-    let lastInstallment: number | undefined;
-
-    if (amortizationType === 'price') {
-      const pmt = principal * (monthlyRate * Math.pow(1 + monthlyRate, loanTerm)) / (Math.pow(1 + monthlyRate, loanTerm) - 1);
-      for (let i = 1; i <= loanTerm; i++) {
-        const interest = balance * monthlyRate;
-        const amortization = pmt - interest;
-        balance -= amortization;
-        totalInterest += interest;
-        table.push({ month: i, installment: pmt, interest, amortization, balance: balance < 0 ? 0 : balance });
-      }
-    } else if (amortizationType === 'sac') {
-      const amortization = principal / loanTerm;
-      for (let i = 1; i <= loanTerm; i++) {
-        const interest = balance * monthlyRate;
-        const installment = amortization + interest;
-        balance -= amortization;
-        totalInterest += interest;
-        table.push({ month: i, installment, interest, amortization, balance: balance < 0 ? 0 : balance });
-      }
-      if (table.length > 0) {
-        lastInstallment = table[table.length - 1].installment;
-      }
-    }
-
-    setResults({ table, totalInterest, totalPaid: principal + totalInterest, calculatedIof: totalIof, lastInstallment });
-  };
-  
-  const handleSave = () => {
-      if (!results) return;
-      onSave({
-          type: 'Empréstimo',
-          description: `${formatCurrency(parseFloat(amount.replace(',', '.')))} em ${term} meses (${amortizationType.toUpperCase()})`,
-          data: { inputs: { amount, rate, term, amortizationType, calculateIof, financeIof }, results }
-      });
-      alert('Simulação salva com sucesso!');
-  }
-
-  const firstInstallment = useMemo(() => results?.table[0]?.installment ?? 0, [results]);
-
-  return (
-    <div className="calculator-container">
-       <div className="calculator-layout">
-          <div className="form-section">
-            <h3>Simular Empréstimo</h3>
-            <div className="form-group">
-              <label htmlFor="amount">Valor do Empréstimo (R$)</label>
-              <input id="amount" type="text" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Ex: 100000,00" />
-            </div>
-            <div className="form-group">
-              <label htmlFor="rate">Taxa de Juros (% a.m.)</label>
-              <input id="rate" type="number" value={rate} onChange={e => setRate(e.target.value)} placeholder="Ex: 1.0" step="0.01" />
-            </div>
-            <div className="form-group">
-              <label htmlFor="term">Número de Parcelas (meses)</label>
-              <input id="term" type="number" value={term} onChange={e => setTerm(e.target.value)} placeholder="Ex: 360" />
-            </div>
-            <div className="form-group">
-              <label htmlFor="amortization">Tipo de Amortização</label>
-              <select id="amortization" value={amortizationType} onChange={e => setAmortizationType(e.target.value as AmortizationType)}>
-                <option value="price">Tabela Price</option>
-                <option value="sac">SAC</option>
-              </select>
-            </div>
-            <div className="form-group">
-                <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <input type="checkbox" checked={calculateIof} onChange={e => {
-                        setCalculateIof(e.target.checked);
-                        if (!e.target.checked) {
-                            setFinanceIof(false);
-                        }
-                    }} style={{ width: 'auto', margin: 0 }} />
-                    Calcular IOF
-                </label>
-            </div>
-            {calculateIof && (
-                <div className="form-group">
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <input type="checkbox" checked={financeIof} onChange={e => setFinanceIof(e.target.checked)} style={{ width: 'auto', margin: 0 }} />
-                        Financiar IOF
-                    </label>
-                </div>
-            )}
-            <button className="btn" onClick={calculateLoan}>Calcular</button>
-            <button className="btn btn-secondary" onClick={resetForm}>Limpar</button>
-            <button className="btn btn-secondary" onClick={onBack}>Voltar</button>
-            {results && <button className="btn" onClick={resetForm}>Nova Simulação</button>}
-          </div>
-
-          <div className="results-section">
-            <div className="print-only">
-              <h3>Demonstrativo de Empréstimo</h3>
-              <p><strong>Valor do Empréstimo:</strong> {formatCurrency(parseFloat(amount.replace(',', '.')))}</p>
-              <p><strong>Taxa de Juros:</strong> {rate}% a.m.</p>
-              <p><strong>Número de Parcelas:</strong> {term} meses</p>
-              <p><strong>Tipo de Amortização:</strong> {amortizationType.toUpperCase()}</p>
-              {results && <p><strong>IOF Calculado:</strong> {calculateIof ? formatCurrency(results.calculatedIof) : 'Não'}</p>}
-              <p><strong>IOF Financiado:</strong> {financeIof ? 'Sim' : 'Não'}</p>
-            </div>
-            <h3>Resultados da Simulação</h3>
-            {results ? (
-              <>
-                <div className="results-summary">
-                  <div className="summary-item">
-                    <h4>Valor da Parcela</h4>
-                    <p>{formatCurrency(firstInstallment)}
-                      {amortizationType === 'sac' && <span style={{fontSize: '0.8rem', display: 'block'}}>(primeira)</span>}
-                    </p>
-                  </div>
-                  {amortizationType === 'sac' && results.lastInstallment && (
-                    <div className="summary-item">
-                        <h4>Última Parcela</h4>
-                        <p>{formatCurrency(results.lastInstallment)}</p>
-                    </div>
-                  )}
-                  <div className="summary-item">
-                    <h4>Total de Juros</h4>
-                    <p>{formatCurrency(results.totalInterest)}</p>
-                  </div>
-                  <div className="summary-item">
-                    <h4>Total Pago</h4>
-                    <p>{formatCurrency(results.totalPaid)}</p>
-                  </div>
-                   {results.calculatedIof > 0 && (
-                      <div className="summary-item">
-                          <h4>IOF Calculado</h4>
-                          <p>{formatCurrency(results.calculatedIof)}</p>
-                      </div>
-                  )}
-                  {financeIof && results.calculatedIof > 0 && (
-                      <div className="summary-item">
-                          <h4>Valor Financiado</h4>
-                          <p>{formatCurrency(parseFloat(amount.replace(',', '.')) + results.calculatedIof)}</p>
-                      </div>
-                  )}
-                </div>
-
-                <h4>Demonstrativo Analítico</h4>
-                <div className="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Mês</th>
-                                <th>Parcela</th>
-                                <th>Juros</th>
-                                <th>Amortização</th>
-                                <th>Saldo Devedor</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {results.table.map(row => (
-                                <tr key={row.month}>
-                                    <td>{row.month}</td>
-                                    <td>{formatCurrency(row.installment)}</td>
-                                    <td>{formatCurrency(row.interest)}</td>
-                                    <td>{formatCurrency(row.amortization)}</td>
-                                    <td>{formatCurrency(row.balance)}</td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-                 <button className="btn btn-save no-print" onClick={handleSave}>Salvar Simulação</button>
-                 <button className="btn no-print" onClick={() => window.print()}>Exportar para PDF</button>
-              </>
-            ) : (
-                <div className="no-results">
-                    <div className="icon">📊</div>
-                    <p>Preencha os dados e clique em "Calcular" para ver a simulação.</p>
-                </div>
-            )}
-          </div>
-       </div>
-    </div>
-  );
+const formatDate = (date) => {
+  if (!date) return '';
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${day}/${month}/${year}`;
 };
 
-const CheckDiscountCalculator = ({ onBack, onSave }: { onBack: () => void, onSave: (calc: Omit<Calculation, 'id'>) => void }) => {
-    type Check = { id: number; value: string; date: string };
+const parseDate = (dateString) => {
+    if (!dateString) return null;
+    const [day, month, year] = dateString.split('/');
+    if (!day || !month || !year) return null;
+    return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+};
+
+const addDays = (date, days) => {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+};
+
+
+const FinancialInvestmentSimulator = ({ goBack }) => {
+    const [initialAmount, setInitialAmount] = useState('1000,00');
+    const [monthlyAmount, setMonthlyAmount] = useState('100,00');
+    const [period, setPeriod] = useState('12');
+    const [periodType, setPeriodType] = useState('months');
+    const [rateType, setRateType] = useState('CDI');
+    const [cdbRate, setCdbRate] = useState('100');
+    const [fixedRate, setFixedRate] = useState('10,0');
     
-    const getInitialDate = () => {
-        const today = new Date();
-        today.setDate(today.getDate() + 30);
-        return today.toISOString().split('T')[0];
+    const [results, setResults] = useState(null);
+
+    const getRate = () => {
+        switch (rateType) {
+            case 'CDI':
+                return 14.90; 
+            case 'SELIC':
+                return 15.00;
+            case 'FIXED':
+                return parseFloat(fixedRate.replace(',', '.')) || 0;
+            default:
+                return 0;
+        }
     };
     
-    const [checks, setChecks] = useState<Check[]>([]);
-    const [newCheckValue, setNewCheckValue] = useState('1000,00');
-    const [newCheckDate, setNewCheckDate] = useState(getInitialDate());
-    const [interestRate, setInterestRate] = useState('3');
-    const [calculateIof, setCalculateIof] = useState(true);
-    const [tac, setTac] = useState('50,00');
-    const [results, setResults] = useState<{ netAmount: number, totalCost: number, originalValue: number, calculatedIof: number, totalInterest: number, tacValue: number } | null>(null);
-    const [editingCheck, setEditingCheck] = useState<Check | null>(null);
-
-    const resetForm = () => {
-        setChecks([]);
-        setNewCheckValue('1000,00');
-        setNewCheckDate(getInitialDate());
-        setInterestRate('3');
-        setCalculateIof(true);
-        setTac('50,00');
-        setResults(null);
-        setEditingCheck(null);
+    const calculateIR = (profit, days) => {
+        if (days <= 180) return profit * 0.225;
+        if (days <= 360) return profit * 0.20;
+        if (days <= 720) return profit * 0.175;
+        return profit * 0.15;
     };
 
-    const handleAddCheck = () => {
-        const value = parseFloat(newCheckValue.replace(',', '.'));
-        if (isNaN(value) || value <= 0 || !newCheckDate) return;
-        setChecks(prev => [...prev, { id: Date.now(), value: newCheckValue, date: newCheckDate }]);
-        setNewCheckValue('1000,00');
-    };
+    const handleCalculate = () => {
+        const initial = parseFloat(initialAmount.replace(/\./g, '').replace(',', '.')) || 0;
+        const monthly = parseFloat(monthlyAmount.replace(/\./g, '').replace(',', '.')) || 0;
+        const p = parseInt(period) || 0;
+        const totalMonths = periodType === 'years' ? p * 12 : p;
+        const totalDays = totalMonths * 30; // Approximation for IR calculation
 
-    const handleDeleteCheck = (id: number) => {
-        setChecks(prev => prev.filter(c => c.id !== id));
-    };
-
-    const handleStartEditing = (check: Check) => {
-        setEditingCheck({ ...check });
-    };
-
-    const handleSaveEdit = () => {
-        if (!editingCheck) return;
-        setChecks(prev => prev.map(c => c.id === editingCheck.id ? editingCheck : c));
-        setEditingCheck(null);
-    };
-
-    const calculateDiscount = () => {
-        const rate = parseFloat(interestRate) / 100;
-        const tacValue = parseFloat(tac.replace(',', '.'));
-
-        if (isNaN(rate) || isNaN(tacValue) || checks.length === 0) {
-            setResults(null);
-            return;
+        let annualRate = getRate();
+        if (rateType === 'CDI') {
+            annualRate = annualRate * (parseFloat(cdbRate) / 100);
         }
-
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        let totalInterest = 0;
-        const totalOriginalValue = checks.reduce((sum, check) => sum + parseFloat(check.value.replace(',', '.')), 0);
-
-        let totalIof = 0;
-
-        if (calculateIof) {
-            const iofAdditional = totalOriginalValue * 0.0038;
-            let iofDaily = 0;
-            
-            checks.forEach(check => {
-                const checkDate = new Date(check.date);
-                const utcCheckDate = new Date(checkDate.getUTCFullYear(), checkDate.getUTCMonth(), checkDate.getUTCDate());
-                const days = Math.ceil((utcCheckDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-                if (days > 0) {
-                    const iofDays = Math.min(days, 365);
-                    iofDaily += parseFloat(check.value.replace(',', '.')) * 0.000082 * iofDays;
-                }
-            });
-
-            totalIof = iofAdditional + iofDaily;
-        }
-
-
-        checks.forEach(check => {
-            const checkDate = new Date(check.date);
-            const utcCheckDate = new Date(checkDate.getUTCFullYear(), checkDate.getUTCMonth(), checkDate.getUTCDate());
-            const days = Math.ceil((utcCheckDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-            if (days > 0) {
-                totalInterest += parseFloat(check.value.replace(',', '.')) * rate * (days / 30);
-            }
-        });
         
-        const totalCost = totalInterest + totalIof + tacValue;
-        const netAmount = totalOriginalValue - totalCost;
+        const monthlyRate = Math.pow(1 + annualRate / 100, 1 / 12) - 1;
 
-        setResults({ netAmount, totalCost, originalValue: totalOriginalValue, calculatedIof: totalIof, totalInterest, tacValue });
+        let finalAmount = initial * Math.pow(1 + monthlyRate, totalMonths);
+        let totalInvested = initial;
+        
+        if (monthly > 0) {
+            finalAmount += monthly * ((Math.pow(1 + monthlyRate, totalMonths) - 1) / monthlyRate);
+            totalInvested += monthly * totalMonths;
+        }
+
+        const profit = finalAmount - totalInvested;
+        const ir = calculateIR(profit, totalDays);
+        const netProfit = profit - ir;
+        const netAmount = totalInvested + netProfit;
+
+        setResults({
+            grossAmount: finalAmount,
+            totalInvested,
+            profit,
+            ir,
+            netAmount,
+            netProfit
+        });
     };
 
-    const handleSaveSimulation = () => {
-        if (!results) return;
-        onSave({
-            type: 'Antecipação de Cheques',
-            description: `${checks.length} cheque(s) totalizando ${formatCurrency(results.originalValue)}`,
-            data: { inputs: { checks, interestRate, tac, calculateIof }, results }
-        });
-        alert('Simulação salva com sucesso!');
-    }
+    const handlePrint = () => {
+        window.print();
+    };
+
+    const formatInput = (value) => {
+      let v = value.replace(/\D/g, '');
+      v = (v/100).toFixed(2) + '';
+      v = v.replace(".", ",");
+      v = v.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
+      return v;
+    };
 
     return (
         <div className="calculator-container">
             <div className="calculator-layout">
                 <div className="form-section">
-                    <h3>Simular Antecipação de Cheques</h3>
-                    
-                    <h4>Adicionar Cheque</h4>
-                     <div className="form-group inline">
-                        <div>
-                            <label htmlFor="newCheckValue">Valor (R$)</label>
-                            <input id="newCheckValue" type="text" value={newCheckValue} onChange={e => setNewCheckValue(e.target.value)} />
+                    <h3>Simulador de Aplicação</h3>
+                    <div className="form-group">
+                        <label>Valor Inicial</label>
+                        <input type="text" value={initialAmount} onChange={e => setInitialAmount(formatInput(e.target.value))} />
+                    </div>
+                    <div className="form-group">
+                        <label>Valor Mensal</label>
+                        <input type="text" value={monthlyAmount} onChange={e => setMonthlyAmount(formatInput(e.target.value))} />
+                    </div>
+                    <div className="form-group inline">
+                         <div>
+                            <label>Período</label>
+                            <input type="number" value={period} onChange={e => setPeriod(e.target.value)} />
+                         </div>
+                         <select value={periodType} onChange={e => setPeriodType(e.target.value)}>
+                            <option value="months">Meses</option>
+                            <option value="years">Anos</option>
+                         </select>
+                    </div>
+                    <div className="form-group">
+                        <label>Tipo de Rentabilidade</label>
+                        <select value={rateType} onChange={e => setRateType(e.target.value)}>
+                            <option value="CDI">Pós-fixado (CDI)</option>
+                            <option value="SELIC">Pós-fixado (SELIC)</option>
+                            <option value="FIXED">Prefixado</option>
+                        </select>
+                    </div>
+                    {rateType === 'CDI' && (
+                        <div className="form-group">
+                            <label>% do CDI</label>
+                            <input type="number" value={cdbRate} onChange={e => setCdbRate(e.target.value)} />
                         </div>
-                        <div>
-                            <label htmlFor="newCheckDate">Vencimento</label>
-                            <input id="newCheckDate" type="date" value={newCheckDate} onChange={e => setNewCheckDate(e.target.value)} />
+                    )}
+                    {rateType === 'FIXED' && (
+                        <div className="form-group">
+                            <label>Taxa Fixa (% a.a.)</label>
+                            <input type="text" value={fixedRate} onChange={e => setFixedRate(e.target.value)} />
                         </div>
-                        <button className="btn" onClick={handleAddCheck}>+</button>
-                    </div>
-
-                    <h4>Taxas da Operação</h4>
-                    <div className="form-group">
-                        <label htmlFor="interestRate">Taxa de Juros (% a.m.)</label>
-                        <input id="interestRate" type="number" value={interestRate} onChange={e => setInterestRate(e.target.value)} step="0.01" />
-                    </div>
-                    <div className="form-group">
-                        <label htmlFor="tac">TAC (R$)</label>
-                        <input id="tac" type="text" value={tac} onChange={e => setTac(e.target.value)} />
-                    </div>
-                    <div className="form-group">
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <input type="checkbox" checked={calculateIof} onChange={e => setCalculateIof(e.target.checked)} style={{ width: 'auto', margin: 0 }} />
-                        Calcular IOF (0.38% + 0.0082% a.d.)
-                      </label>
-                    </div>
-
-                    <button className="btn" onClick={calculateDiscount} disabled={checks.length === 0}>Calcular</button>
-                    <button className="btn btn-secondary" onClick={resetForm}>Limpar</button>
-                    <button className="btn btn-secondary" onClick={onBack}>Voltar</button>
-                    {results && <button className="btn" onClick={resetForm}>Nova Simulação</button>}
+                    )}
+                    <button className="btn" onClick={handleCalculate}>Calcular</button>
+                    <button className="btn btn-secondary no-print" onClick={goBack}>Voltar</button>
                 </div>
-
                 <div className="results-section">
-                    <div className="print-only">
-                        <h3>Demonstrativo de Antecipação de Cheques</h3>
-                        <p><strong>Taxa de Juros:</strong> {interestRate}% a.m.</p>
-                        <p><strong>TAC:</strong> {formatCurrency(parseFloat(tac.replace(',', '.')))}</p>
-                        <p><strong>Cálculo de IOF:</strong> {calculateIof ? 'Sim' : 'Não'}</p>
-                        <h4>Cheques:</h4>
-                        <table>
-                            <thead><tr><th>Valor</th><th>Vencimento</th></tr></thead>
-                            <tbody>
-                                {checks.map(c => <tr key={c.id}><td>{formatCurrency(parseFloat(c.value.replace(',', '.')))}</td><td>{new Date(c.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</td></tr>)}
-                            </tbody>
-                        </table>
-                    </div>
-                    <h3>Cheques Adicionados</h3>
-                    <div style={{ maxHeight: '180px', overflowY: 'auto', marginBottom: '20px' }} className="no-print">
-                        {checks.length > 0 ? checks.map(check => (
-                            <div key={check.id} className="check-list-item">
-                                {editingCheck?.id === check.id ? (
-                                    <>
-                                        <input type="text" value={editingCheck.value} onChange={e => setEditingCheck({...editingCheck, value: e.target.value})} />
-                                        <input type="date" value={editingCheck.date} onChange={e => setEditingCheck({...editingCheck, date: e.target.value})} />
-                                        <div>
-                                            <button className="btn btn-small" onClick={handleSaveEdit}>Salvar</button>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <>
-                                        <span>{formatCurrency(parseFloat(check.value.replace(',', '.')))}</span>
-                                        <span>{new Date(check.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}</span>
-                                        <div>
-                                            <button className="btn btn-small btn-secondary" onClick={() => handleStartEditing(check)}>Editar</button>
-                                            <button className="btn btn-small btn-danger" onClick={() => handleDeleteCheck(check.id)}>X</button>
-                                        </div>
-                                    </>
-                                )}
+                    <h3>Resultados</h3>
+                    {results ? (
+                        <>
+                            <div className="results-summary">
+                                <div className="summary-item">
+                                    <h4>Valor Bruto Final</h4>
+                                    <p>{formatCurrency(results.grossAmount)}</p>
+                                </div>
+                                <div className="summary-item">
+                                    <h4>Valor Investido</h4>
+                                    <p>{formatCurrency(results.totalInvested)}</p>
+                                </div>
+                                <div className="summary-item">
+                                    <h4>Total em Juros</h4>
+                                    <p>{formatCurrency(results.profit)}</p>
+                                </div>
+                                <div className="summary-item">
+                                    <h4>Imposto de Renda</h4>
+                                    <p className="negative">{formatCurrency(results.ir)}</p>
+                                </div>
+                                <div className="summary-item">
+                                    <h4>Valor Líquido Final</h4>
+                                    <p className="positive">{formatCurrency(results.netAmount)}</p>
+                                </div>
+                                 <div className="summary-item">
+                                    <h4>Lucro Líquido</h4>
+                                    <p className="positive">{formatCurrency(results.netProfit)}</p>
+                                </div>
                             </div>
-                        )) : <p style={{textAlign: 'center', color: '#777'}}>Nenhum cheque adicionado.</p>}
+                            <button className="btn btn-save no-print" onClick={handlePrint}>Exportar para PDF</button>
+                        </>
+                    ) : (
+                        <div className="no-results">
+                            <div className="icon">📊</div>
+                            <p>Preencha os campos e clique em "Calcular" para ver os resultados.</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const CheckAnticipationCalculator = ({ goBack, saveSimulation, viewHistory }) => {
+    const [checks, setChecks] = useState([{ days: '', value: '' }]);
+    const [tac, setTac] = useState('50,00');
+    const [interestRate, setInterestRate] = useState('3,00');
+    
+    const [results, setResults] = useState(null);
+
+    const formatInput = (value) => {
+      let v = value.replace(/\D/g, '');
+      v = (v/100).toFixed(2) + '';
+      v = v.replace(".", ",");
+      v = v.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.');
+      return v;
+    };
+    
+    const handleAddCheck = () => {
+        setChecks([...checks, { days: '', value: '' }]);
+    };
+
+    const handleRemoveCheck = (index) => {
+        const newChecks = checks.filter((_, i) => i !== index);
+        setChecks(newChecks);
+    };
+
+    const handleCheckChange = (index, field, value) => {
+        const newChecks = [...checks];
+        if (field === 'value') {
+            newChecks[index][field] = formatInput(value);
+        } else {
+            newChecks[index][field] = value;
+        }
+        setChecks(newChecks);
+    };
+
+    const handleCalculate = () => {
+        const parsedChecks = checks.map(c => ({
+            days: parseInt(c.days) || 0,
+            value: parseFloat(c.value.replace(/\./g, '').replace(',', '.')) || 0,
+        }));
+        
+        const parsedTac = parseFloat(tac.replace(/\./g, '').replace(',', '.')) || 0;
+        const monthlyInterest = (parseFloat(interestRate.replace(',', '.')) || 0) / 100;
+        const dailyInterest = monthlyInterest / 30;
+
+        let totalGrossValue = 0;
+        let totalInterest = 0;
+        let totalIof = 0;
+
+        const detailedChecks = parsedChecks.filter(c => c.days > 0 && c.value > 0).map(check => {
+            const interest = check.value * dailyInterest * check.days;
+            const iof = check.value * 0.000082 * check.days + check.value * 0.0038;
+            totalGrossValue += check.value;
+            totalInterest += interest;
+            totalIof += iof;
+            return {
+                ...check,
+                interest,
+                iof,
+                netValue: check.value - interest - iof,
+            };
+        });
+
+        const totalOperationCost = totalInterest + parsedTac + totalIof;
+        const netAmountToReceive = totalGrossValue - totalOperationCost;
+
+        setResults({
+            netAmountToReceive,
+            totalOperationCost,
+            totalGrossValue,
+            totalInterest,
+            parsedTac,
+            totalIof,
+            detailedChecks
+        });
+    };
+
+    const handleSave = () => {
+        if(results) {
+            const simulationData = {
+                id: Date.now(),
+                type: 'Antecipação de Cheques',
+                date: new Date().toISOString(),
+                ...results
+            };
+            saveSimulation(simulationData);
+            alert('Simulação salva com sucesso!');
+        }
+    };
+    
+     const handlePrint = () => {
+        window.print();
+    };
+
+    return (
+        <div className="calculator-container">
+            <div className="calculator-layout">
+                <div className="form-section">
+                    <h3>Antecipação de Cheques</h3>
+                    {checks.map((check, index) => (
+                        <div key={index} className="form-group inline">
+                            <div>
+                                <label>Prazo (dias)</label>
+                                <input 
+                                    type="number" 
+                                    value={check.days} 
+                                    onChange={e => handleCheckChange(index, 'days', e.target.value)} 
+                                    placeholder="Ex: 30"
+                                />
+                            </div>
+                            <div>
+                                <label>Valor (R$)</label>
+                                <input 
+                                    type="text" 
+                                    value={check.value} 
+                                    onChange={e => handleCheckChange(index, 'value', e.target.value)}
+                                    placeholder="Ex: 1.000,00"
+                                />
+                            </div>
+                            {checks.length > 1 && (
+                                <button className="btn btn-danger" onClick={() => handleRemoveCheck(index)} style={{height: '47px'}}>-</button>
+                            )}
+                        </div>
+                    ))}
+                    <button className="btn btn-secondary" onClick={handleAddCheck}>Adicionar Cheque</button>
+
+                    <div className="form-group" style={{marginTop: '20px'}}>
+                        <label>Taxa de Juros (% a.m.)</label>
+                        <input type="text" value={interestRate} onChange={e => setInterestRate(e.target.value)} />
+                    </div>
+                    <div className="form-group">
+                        <label>TAC (Tarifa de Abertura de Crédito)</label>
+                        <input type="text" value={tac} onChange={e => setTac(formatInput(e.target.value))} />
                     </div>
 
+                    <button className="btn" onClick={handleCalculate}>Calcular</button>
+                    <button className="btn btn-secondary no-print" onClick={goBack}>Voltar</button>
+                </div>
+                <div className="results-section">
                     <h3>Resultados da Simulação</h3>
                     {results ? (
                         <>
-                            <div className="results-summary" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
+                            <div className="results-summary">
                                 <div className="summary-item">
                                     <h4>Valor Líquido a Receber</h4>
-                                    <p>{formatCurrency(results.netAmount)}</p>
+                                    <p className="positive">{formatCurrency(results.netAmountToReceive)}</p>
                                 </div>
                                 <div className="summary-item">
                                     <h4>Custo Total da Operação</h4>
-                                    <p>{formatCurrency(results.totalCost)}</p>
+                                    <p className="negative">{formatCurrency(results.totalOperationCost)}</p>
                                     <div className="cdb-breakdown">
-                                        <div>
-                                            <span>Juros:</span>
-                                            <span>{formatCurrency(results.totalInterest)}</span>
-                                        </div>
-                                        <div>
-                                            <span>TAC:</span>
-                                            <span>{formatCurrency(results.tacValue)}</span>
-                                        </div>
-                                        <div>
-                                            <span>IOF:</span>
-                                            <span>{formatCurrency(results.calculatedIof)}</span>
-                                        </div>
+                                        <div><span>Juros:</span> <span>{formatCurrency(results.totalInterest)}</span></div>
+                                        <div><span>TAC:</span> <span>{formatCurrency(results.parsedTac)}</span></div>
+                                        <div><span>IOF:</span> <span>{formatCurrency(results.totalIof)}</span></div>
                                     </div>
                                 </div>
-                                 <div className="summary-item">
+                                <div className="summary-item">
                                     <h4>Valor Bruto dos Cheques</h4>
-                                    <p>{formatCurrency(results.originalValue)}</p>
-                                </div>
-                                <div className="summary-item">
-                                    <h4>IOF Calculado</h4>
-                                    <p>{formatCurrency(results.calculatedIof)}</p>
+                                    <p>{formatCurrency(results.totalGrossValue)}</p>
                                 </div>
                             </div>
-                            <button className="btn btn-save no-print" onClick={handleSaveSimulation}>Salvar Simulação</button>
-                            <button className="btn no-print" onClick={() => window.print()}>Exportar para PDF</button>
-                        </>
-                    ) : (
-                        <div className="no-results">
-                            <div className="icon">💸</div>
-                            <p>Adicione os cheques, preencha as taxas e clique em "Calcular".</p>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const RuralFinancingCalculator = ({ onBack, onSave }: { onBack: () => void, onSave: (calc: Omit<Calculation, 'id'>) => void }) => {
-    const [amount, setAmount] = useState('500000,00');
-    const [rate, setRate] = useState('7.5');
-    const [term, setTerm] = useState('10');
-    const [gracePeriod, setGracePeriod] = useState('3');
-    const [amortizationType, setAmortizationType] = useState<AmortizationType>('sac');
-    const [graceInterestPayment, setGraceInterestPayment] = useState('pay_periodically'); // 'pay_periodically', 'pay_at_end', 'capitalize'
-    const [graceInterestFrequency, setGraceInterestFrequency] = useState(1); // 1: annual, 2: semi, 4: quarterly, 12: monthly
-    const [results, setResults] = useState<{ table: RuralAmortizationRow[], totalInterest: number, totalPaid: number, graceInterest: number, lastInstallment?: number } | null>(null);
-
-    const resetForm = () => {
-        setAmount('500000,00');
-        setRate('7.5');
-        setTerm('10');
-        setGracePeriod('3');
-        setAmortizationType('sac');
-        setGraceInterestPayment('pay_periodically');
-        setGraceInterestFrequency(1);
-        setResults(null);
-    };
-
-    const calculate = () => {
-        const loanAmount = parseFloat(amount.replace(',', '.'));
-        const annualRate = parseFloat(rate) / 100;
-        const totalTermYears = parseInt(term, 10);
-        const graceYears = parseInt(gracePeriod, 10);
-
-        const amortizationYears = totalTermYears - graceYears;
-
-        if (isNaN(loanAmount) || isNaN(annualRate) || isNaN(totalTermYears) || isNaN(graceYears) || loanAmount <= 0 || annualRate < 0 || totalTermYears <= 0 || graceYears < 0 || amortizationYears < 0) {
-            if (amortizationYears < 0) {
-                alert("O prazo total não pode ser menor que o período de carência.");
-            }
-            setResults(null);
-            return;
-        }
-
-        const table: RuralAmortizationRow[] = [];
-        let balance = loanAmount;
-        let totalInterest = 0;
-        let graceInterest = 0;
-
-        // Grace Period
-        if (graceYears > 0) {
-            if (graceInterestPayment === 'pay_periodically') {
-                const paymentPeriodsInGrace = graceYears * graceInterestFrequency;
-                const ratePerPeriod = Math.pow(1 + annualRate, 1 / graceInterestFrequency) - 1;
-                const getPeriodLabel = (periodIndex: number) => {
-                    switch (graceInterestFrequency) {
-                        case 12: return `Carência Mês ${periodIndex}`;
-                        case 4: return `Carência Trim. ${periodIndex}`;
-                        case 2: return `Carência Sem. ${periodIndex}`;
-                        case 1: default: return `Carência Ano ${periodIndex}`;
-                    }
-                };
-                for (let i = 1; i <= paymentPeriodsInGrace; i++) {
-                    const interest = balance * ratePerPeriod;
-                    graceInterest += interest;
-                    totalInterest += interest;
-                    table.push({ period: getPeriodLabel(i), installment: interest, interest: interest, amortization: 0, balance: balance });
-                }
-            } else if (graceInterestPayment === 'capitalize') {
-                for (let i = 1; i <= graceYears; i++) {
-                    const interest = balance * annualRate;
-                    graceInterest += interest;
-                    totalInterest += interest;
-                    balance += interest;
-                    table.push({ period: `Capitalização Ano ${i}`, installment: 0, interest: interest, amortization: 0, balance: balance });
-                }
-            } else if (graceInterestPayment === 'pay_at_end') {
-                let accumulatedGraceInterest = 0;
-                for (let i = 1; i <= graceYears; i++) {
-                    const interest = balance * annualRate;
-                    accumulatedGraceInterest += interest;
-                    graceInterest += interest;
-                    totalInterest += interest;
-                    table.push({ period: `Carência Ano ${i}`, installment: 0, interest: interest, amortization: 0, balance: balance });
-                }
-                if (accumulatedGraceInterest > 0) {
-                    table.push({ period: `Pgto. Juros Carência`, installment: accumulatedGraceInterest, interest: accumulatedGraceInterest, amortization: 0, balance: balance });
-                }
-            }
-        }
-        
-        // Amortization Period
-        let amortizationBalance = balance;
-        if (amortizationYears > 0) {
-            if (amortizationType === 'price') {
-                const pmt = amortizationBalance * (annualRate * Math.pow(1 + annualRate, amortizationYears)) / (Math.pow(1 + annualRate, amortizationYears) - 1);
-                for (let i = 1; i <= amortizationYears; i++) {
-                    const interest = amortizationBalance * annualRate;
-                    const amortization = pmt - interest;
-                    amortizationBalance -= amortization;
-                    totalInterest += interest;
-                    table.push({ period: `Ano ${i}`, installment: pmt, interest, amortization, balance: amortizationBalance < 0 ? 0 : amortizationBalance });
-                }
-            } else if (amortizationType === 'sac') {
-                const amortization = amortizationBalance / amortizationYears;
-                for (let i = 1; i <= amortizationYears; i++) {
-                    const interest = amortizationBalance * annualRate;
-                    const installment = amortization + interest;
-                    amortizationBalance -= amortization;
-                    totalInterest += interest;
-                    table.push({ period: `Ano ${i}`, installment, interest, amortization, balance: amortizationBalance < 0 ? 0 : amortizationBalance });
-                }
-            }
-        }
-        
-        let lastInstallment: number | undefined;
-        if (amortizationType === 'sac' && amortizationYears > 0) {
-            const amortizationRows = table.filter(r => r.amortization > 0);
-            if (amortizationRows.length > 0) {
-                lastInstallment = amortizationRows[amortizationRows.length - 1].installment;
-            }
-        }
-        
-        setResults({ table, totalInterest, totalPaid: loanAmount + totalInterest, graceInterest, lastInstallment });
-    };
-    
-    const handleSave = () => {
-        if (!results) return;
-        onSave({
-            type: 'Financiamento Rural',
-            description: `${formatCurrency(parseFloat(amount.replace(',', '.')))} em ${term} anos com ${gracePeriod} de carência`,
-            data: { inputs: { amount, rate, term, gracePeriod, amortizationType, graceInterestPayment, graceInterestFrequency }, results }
-        });
-        alert('Simulação salva com sucesso!');
-    }
-
-    const firstInstallment = useMemo(() => results?.table.find(r => r.amortization > 0)?.installment ?? 0, [results]);
-
-    return (
-        <div className="calculator-container">
-            <div className="calculator-layout">
-                <div className="form-section">
-                    <h3>Simular Financiamento Rural</h3>
-                    <div className="form-group">
-                        <label htmlFor="amount-rural">Valor do Financiamento (R$)</label>
-                        <input id="amount-rural" type="text" value={amount} onChange={e => setAmount(e.target.value)} />
-                    </div>
-                    <div className="form-group">
-                        <label htmlFor="rate-rural">Taxa de Juros (% a.a.)</label>
-                        <input id="rate-rural" type="number" value={rate} onChange={e => setRate(e.target.value)} step="0.01" />
-                    </div>
-                    <div className="form-group">
-                        <label htmlFor="term-rural">Prazo Total (anos)</label>
-                        <input id="term-rural" type="number" value={term} onChange={e => setTerm(e.target.value)} />
-                    </div>
-                    <div className="form-group">
-                        <label htmlFor="grace-rural">Período de Carência (anos)</label>
-                        <input id="grace-rural" type="number" value={gracePeriod} onChange={e => setGracePeriod(e.target.value)} />
-                    </div>
-                    <div className="form-group">
-                        <label htmlFor="grace-interest">Tratamento dos Juros na Carência</label>
-                        <select id="grace-interest" value={graceInterestPayment} onChange={e => setGraceInterestPayment(e.target.value)}>
-                            <option value="pay_periodically">Pagar durante a carência</option>
-                            <option value="pay_at_end">Pagar ao final da carência</option>
-                            <option value="capitalize">Capitalizar no saldo devedor</option>
-                        </select>
-                    </div>
-                    {graceInterestPayment === 'pay_periodically' && (
-                        <div className="form-group">
-                             <label htmlFor="grace-frequency">Frequência de Pagamento (Juros)</label>
-                             <select id="grace-frequency" value={graceInterestFrequency} onChange={e => setGraceInterestFrequency(Number(e.target.value))}>
-                                <option value={12}>Mensal</option>
-                                <option value={4}>Trimestral</option>
-                                <option value={2}>Semestral</option>
-                                <option value={1}>Anual</option>
-                             </select>
-                        </div>
-                    )}
-                    <div className="form-group">
-                        <label htmlFor="amortization-rural">Sistema de Amortização</label>
-                        <select id="amortization-rural" value={amortizationType} onChange={e => setAmortizationType(e.target.value as AmortizationType)}>
-                            <option value="sac">SAC</option>
-                            <option value="price">Tabela Price</option>
-                        </select>
-                    </div>
-                    <button className="btn" onClick={calculate}>Calcular</button>
-                    <button className="btn btn-secondary" onClick={resetForm}>Limpar</button>
-                    <button className="btn btn-secondary" onClick={onBack}>Voltar</button>
-                    {results && <button className="btn" onClick={resetForm}>Nova Simulação</button>}
-                </div>
-                <div className="results-section">
-                     <div className="print-only">
-                      <h3>Demonstrativo de Financiamento Rural</h3>
-                      <p><strong>Valor do Financiamento:</strong> {formatCurrency(parseFloat(amount.replace(',', '.')))}</p>
-                      <p><strong>Taxa de Juros:</strong> {rate}% a.a.</p>
-                      <p><strong>Prazo Total:</strong> {term} anos</p>
-                      <p><strong>Período de Carência:</strong> {gracePeriod} anos</p>
-                      <p><strong>Sistema de Amortização:</strong> {amortizationType.toUpperCase()}</p>
-                    </div>
-                    <h3>Resultados da Simulação</h3>
-                    {results ? (
-                        <>
-                            <div className="results-summary">
-                                <div className="summary-item">
-                                    <h4>Juros na Carência</h4>
-                                    <p>{formatCurrency(results.graceInterest)}</p>
-                                </div>
-                                <div className="summary-item">
-                                    <h4>Primeira Parcela</h4>
-                                    <p>{formatCurrency(firstInstallment)}</p>
-                                </div>
-                                {amortizationType === 'sac' && results.lastInstallment && (
-                                    <div className="summary-item">
-                                        <h4>Última Parcela</h4>
-                                        <p>{formatCurrency(results.lastInstallment)}</p>
-                                    </div>
-                                )}
-                                <div className="summary-item">
-                                    <h4>Total Pago</h4>
-                                    <p>{formatCurrency(results.totalPaid)}</p>
-                                </div>
-                            </div>
-                            <h4>Demonstrativo Analítico</h4>
-                            <div className="table-container">
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>Período</th>
-                                            <th>Parcela</th>
-                                            <th>Juros</th>
-                                            <th>Amortização</th>
-                                            <th>Saldo Devedor</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {results.table.map(row => (
-                                            <tr key={row.period}>
-                                                <td>{row.period}</td>
-                                                <td>{formatCurrency(row.installment)}</td>
-                                                <td>{formatCurrency(row.interest)}</td>
-                                                <td>{formatCurrency(row.amortization)}</td>
-                                                <td>{formatCurrency(row.balance)}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                            <button className="btn btn-save no-print" onClick={handleSave}>Salvar Simulação</button>
-                            <button className="btn no-print" onClick={() => window.print()}>Exportar para PDF</button>
-                        </>
-                    ) : (
-                        <div className="no-results">
-                            <div className="icon">🚜</div>
-                            <p>Preencha os dados para simular seu financiamento.</p>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const CompetitorRateChecker = ({ onBack }: { onBack: () => void }) => {
-    const [loanAmount, setLoanAmount] = useState('10000,00');
-    const [installmentValue, setInstallmentValue] = useState('450,00');
-    const [term, setTerm] = useState('36');
-    const [calculatedRate, setCalculatedRate] = useState<number | null>(null);
-
-    const resetForm = () => {
-        setLoanAmount('10000,00');
-        setInstallmentValue('450,00');
-        setTerm('36');
-        setCalculatedRate(null);
-    };
-
-    const calculateRate = () => {
-        const principal = parseFloat(loanAmount.replace(',', '.'));
-        const payment = parseFloat(installmentValue.replace(',', '.'));
-        const numPayments = parseInt(term, 10);
-
-        if (isNaN(principal) || isNaN(payment) || isNaN(numPayments) || principal <= 0 || payment <= 0 || numPayments <= 0 || (principal / numPayments) > payment) {
-            setCalculatedRate(null);
-            return;
-        }
-
-        let low = 0;
-        let high = 1;
-        let mid = 0;
-        const precision = 1e-7;
-
-        for (let i = 0; i < 100; i++) {
-            mid = (low + high) / 2;
-            if (mid < precision) break;
-
-            const calculatedPrincipal = payment * (1 - Math.pow(1 + mid, -numPayments)) / mid;
-
-            if (Math.abs(calculatedPrincipal - principal) < precision) {
-                break;
-            }
-            
-            // If calculated principal is > actual principal, our rate was too low.
-            if (calculatedPrincipal > principal) {
-                low = mid;
-            } else {
-                high = mid;
-            }
-        }
-        
-        if (isNaN(mid) || mid <= 0) {
-            setCalculatedRate(null);
-        } else {
-            setCalculatedRate(mid * 100);
-        }
-    };
-    
-    return (
-        <div className="calculator-container">
-            <div className="calculator-layout">
-                <div className="form-section">
-                    <h3>Verificador de Taxa Concorrente</h3>
-                    <div className="form-group">
-                        <label htmlFor="loanAmountRate">Valor do Empréstimo (R$)</label>
-                        <input id="loanAmountRate" type="text" value={loanAmount} onChange={e => setLoanAmount(e.target.value)} />
-                    </div>
-                    <div className="form-group">
-                        <label htmlFor="installmentValueRate">Valor da Parcela (R$)</label>
-                        <input id="installmentValueRate" type="text" value={installmentValue} onChange={e => setInstallmentValue(e.target.value)} />
-                    </div>
-                    <div className="form-group">
-                        <label htmlFor="termRate">Quantidade de Parcelas</label>
-                        <input id="termRate" type="number" value={term} onChange={e => setTerm(e.target.value)} />
-                    </div>
-                    <button className="btn" onClick={calculateRate}>Achar Taxa</button>
-                    <button className="btn btn-secondary" onClick={resetForm}>Limpar</button>
-                    <button className="btn btn-secondary" onClick={onBack}>Voltar</button>
-                    {calculatedRate !== null && <button className="btn" onClick={resetForm}>Novo Cálculo</button>}
-                </div>
-                <div className="results-section">
-                    <div className="print-only">
-                        <h3>Demonstrativo de Taxa Concorrente</h3>
-                        <p><strong>Valor do Empréstimo:</strong> {formatCurrency(parseFloat(loanAmount.replace(',', '.')))}</p>
-                        <p><strong>Valor da Parcela:</strong> {formatCurrency(parseFloat(installmentValue.replace(',', '.')))}</p>
-                        <p><strong>Quantidade de Parcelas:</strong> {term}</p>
-                    </div>
-                    <h3>Resultado</h3>
-                    {calculatedRate !== null ? (
-                        <>
-                         <div className="results-summary" style={{gridTemplateColumns: '1fr'}}>
-                             <div className="summary-item">
-                                <h4>Taxa de Juros Mensal Encontrada</h4>
-                                <p>{calculatedRate.toFixed(4)}% a.m.</p>
-                            </div>
-                        </div>
-                        <button className="btn no-print" onClick={() => window.print()}>Exportar para PDF</button>
-                        </>
-                    ) : (
-                        <div className="no-results">
-                            <div className="icon">🔍</div>
-                            <p>Preencha os dados para descobrir a taxa de juros real da operação.</p>
-                        </div>
-                    )}
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const FinancialInvestmentSimulator = ({ onBack }: { onBack: () => void }) => {
-    const [investmentAmount, setInvestmentAmount] = useState('10000,00');
-    const [periodInDays, setPeriodInDays] = useState(365);
-    const [customPeriod, setCustomPeriod] = useState('365');
-    const [activePeriodButton, setActivePeriodButton] = useState('1y');
-    const [lcaRate, setLcaRate] = useState('98');
-    const [cdbRate, setCdbRate] = useState('110');
-    const [results, setResults] = useState<any | null>(null);
-    const [showDetailedStatement, setShowDetailedStatement] = useState(false);
-
-    const { cdi, selic } = useMemo(() => {
-        return {
-            cdi: 0.1490,
-            selic: 0.15
-        };
-    }, []);
-
-    const resetForm = () => {
-        setInvestmentAmount('10000,00');
-        setPeriodInDays(365);
-        setCustomPeriod('365');
-        setActivePeriodButton('1y');
-        setLcaRate('98');
-        setCdbRate('110');
-        setResults(null);
-        setShowDetailedStatement(false);
-    };
-
-    const getIncomeTaxRate = (days: number): number => {
-        if (days <= 180) return 0.225;
-        if (days <= 360) return 0.20;
-        if (days <= 720) return 0.175;
-        return 0.15;
-    };
-    
-    const calculate = () => {
-        setShowDetailedStatement(false);
-        const principal = parseFloat(investmentAmount.replace(',', '.'));
-        const lcaRatePercent = parseFloat(lcaRate);
-        const cdbRatePercent = parseFloat(cdbRate);
-
-        if (isNaN(principal) || isNaN(lcaRatePercent) || isNaN(cdbRatePercent) || principal <= 0 || periodInDays <= 0) {
-            setResults(null);
-            return;
-        }
-
-        // --- CDB/RDC Calculation ---
-        const cdbAnnualRate = cdi * (cdbRatePercent / 100);
-        const grossAmountCdb = principal * Math.pow(1 + cdbAnnualRate, periodInDays / 365);
-        const grossYieldCdb = grossAmountCdb - principal;
-        const taxRate = getIncomeTaxRate(periodInDays);
-        const taxAmount = grossYieldCdb * taxRate;
-        const netAmountCdb = grossAmountCdb - taxAmount;
-
-        // --- LCA/LCI Calculation ---
-        const lcaAnnualRate = cdi * (lcaRatePercent / 100);
-        const netAmountLca = principal * Math.pow(1 + lcaAnnualRate, periodInDays / 365);
-
-        // --- Poupança Calculation ---
-        const poupancaAnnualRate = selic > 0.085 ? 0.0617 : selic * 0.70; // 6.17% a.a. = 0.5% a.m.
-        const netAmountPoupanca = principal * Math.pow(1 + poupancaAnnualRate, periodInDays / 365);
-
-        // --- Effective Monthly Rates ---
-        const months = periodInDays / 30.4375;
-        
-        const totalGrossRateCdb = (grossAmountCdb / principal) - 1;
-        const monthlyGrossRateCdb = (Math.pow(1 + totalGrossRateCdb, 1 / months) - 1) * 100;
-        const totalNetRateCdb = (netAmountCdb / principal) - 1;
-        const monthlyNetRateCdb = (Math.pow(1 + totalNetRateCdb, 1 / months) - 1) * 100;
-
-        const totalNetRateLca = (netAmountLca / principal) - 1;
-        const monthlyNetRateLca = (Math.pow(1 + totalNetRateLca, 1 / months) - 1) * 100;
-
-        const totalNetRatePoupanca = (netAmountPoupanca / principal) - 1;
-        const monthlyNetRatePoupanca = (Math.pow(1 + totalNetRatePoupanca, 1 / months) - 1) * 100;
-        
-        // --- Detailed Monthly Breakdown ---
-        const detailedTable = [];
-        const totalMonths = Math.floor(periodInDays / 30.4375);
-
-        if (totalMonths > 0) {
-            const cdbMonthlyRate = Math.pow(1 + cdbAnnualRate, 1 / 12) - 1;
-            const lcaMonthlyRate = Math.pow(1 + lcaAnnualRate, 1 / 12) - 1;
-            const poupancaMonthlyRate = Math.pow(1 + poupancaAnnualRate, 1 / 12) - 1;
-
-            let currentCdbBalance = principal;
-            let currentLcaBalance = principal;
-            let currentPoupancaBalance = principal;
-
-            for (let month = 1; month <= totalMonths; month++) {
-                currentCdbBalance *= (1 + cdbMonthlyRate);
-                currentLcaBalance *= (1 + lcaMonthlyRate);
-                currentPoupancaBalance *= (1 + poupancaMonthlyRate);
-                
-                detailedTable.push({
-                    month,
-                    cdbBalance: currentCdbBalance,
-                    lcaBalance: currentLcaBalance,
-                    poupancaBalance: currentPoupancaBalance,
-                });
-            }
-        }
-
-        setResults({
-            grossAmountCdb,
-            grossYieldCdb,
-            taxAmountCdb: taxAmount,
-            taxRateCdb: taxRate,
-            netAmountCdb,
-            netAmountLca,
-            netAmountPoupanca,
-            rates: [
-                { name: 'CDB/RDC', gross: monthlyGrossRateCdb, net: monthlyNetRateCdb },
-                { name: 'LCI/LCA', gross: monthlyNetRateLca, net: monthlyNetRateLca }, // Gross is same as Net
-                { name: 'Poupança', gross: monthlyNetRatePoupanca, net: monthlyNetRatePoupanca }, // Gross is same as Net
-            ],
-            detailedTable
-        });
-    };
-
-    const handlePeriodClick = (days: number, key: string) => {
-        setPeriodInDays(days);
-        setActivePeriodButton(key);
-        if (key !== 'custom') {
-            setCustomPeriod(String(days));
-        }
-    };
-    
-    const handleCustomPeriodChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const days = e.target.value;
-        setCustomPeriod(days);
-        setActivePeriodButton('custom');
-        if (days) {
-            setPeriodInDays(parseInt(days, 10));
-        }
-    }
-
-    const periodOptions = [
-        { key: '30d', label: '30 dias', days: 30 },
-        { key: '60d', label: '60 dias', days: 60 },
-        { key: '90d', label: '90 dias', days: 90 },
-        { key: '180d', label: '180 dias', days: 180 },
-        { key: '1y', label: '1 Ano', days: 365 },
-        { key: '2y', label: '2 Anos', days: 730 },
-    ];
-
-    return (
-        <div className="calculator-container">
-            <div className="calculator-layout">
-                <div className="form-section">
-                    <h3>Simulador de Aplicação Financeira</h3>
-                    <div className="form-group">
-                        <label htmlFor="investmentAmount">Valor da Aplicação (R$)</label>
-                        <input id="investmentAmount" type="text" value={investmentAmount} onChange={e => setInvestmentAmount(e.target.value)} />
-                    </div>
-
-                    <div className="form-group">
-                        <label>Período de Investimento</label>
-                        <div className="period-filters">
-                            {periodOptions.map(opt => (
-                                <button key={opt.key} onClick={() => handlePeriodClick(opt.days, opt.key)} className={activePeriodButton === opt.key ? 'active' : ''}>
-                                    {opt.label}
-                                </button>
-                            ))}
-                             <button onClick={() => setActivePeriodButton('custom')} className={activePeriodButton === 'custom' ? 'active' : ''}>
-                                Personalizado
-                            </button>
-                        </div>
-                        {activePeriodButton === 'custom' && (
-                             <div style={{marginTop: '10px'}}>
-                                <label htmlFor="customPeriodDays">Período Personalizado (dias)</label>
-                                <input id="customPeriodDays" type="number" value={customPeriod} onChange={handleCustomPeriodChange} />
-                             </div>
-                        )}
-                    </div>
-
-                    <div className="form-group">
-                        <label htmlFor="cdbRate">Taxa CDB/RDC (% do CDI)</label>
-                        <input id="cdbRate" type="number" value={cdbRate} onChange={e => setCdbRate(e.target.value)} />
-                    </div>
-                     <div className="form-group">
-                        <label htmlFor="lcaRate">Taxa LCI/LCA (% do CDI)</label>
-                        <input id="lcaRate" type="number" value={lcaRate} onChange={e => setLcaRate(e.target.value)} />
-                    </div>
-
-                    <p style={{fontSize: '0.8rem', color: '#666', marginBottom: '15px'}}>
-                        Usando CDI: {(cdi * 100).toFixed(2)}% a.a., SELIC: {(selic * 100).toFixed(2)}% a.a. (fixos para simulação).
-                    </p>
-
-                    <button className="btn" onClick={calculate}>Calcular</button>
-                    <button className="btn btn-secondary" onClick={resetForm}>Limpar</button>
-                    <button className="btn btn-secondary" onClick={onBack}>Voltar</button>
-                </div>
-
-                <div className="results-section">
-                     <div className="print-only">
-                        <h3>Demonstrativo de Aplicação Financeira</h3>
-                        <p><strong>Valor da Aplicação:</strong> {formatCurrency(parseFloat(investmentAmount.replace(',', '.')))}</p>
-                        <p><strong>Período:</strong> {periodInDays} dias</p>
-                        <p><strong>Taxa CDB/RDC:</strong> {cdbRate}% do CDI</p>
-                        <p><strong>Taxa LCI/LCA:</strong> {lcaRate}% do CDI</p>
-                    </div>
-                    <h3>Comparativo de Investimentos</h3>
-                    {results ? (
-                        <>
-                            <div className="results-summary">
-                                <div className="summary-item">
-                                    <h4>Líquido CDB/RDC</h4>
-                                    <p>{formatCurrency(results.netAmountCdb)}</p>
-                                    <div className="cdb-breakdown">
-                                        <div>
-                                            <span>Valor Bruto:</span>
-                                            <span>{formatCurrency(results.grossAmountCdb)}</span>
-                                        </div>
-                                        <div>
-                                            <span>IR ({results.taxRateCdb * 100}%):</span>
-                                            <span className="ir-value">-{formatCurrency(results.taxAmountCdb)}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div className="summary-item">
-                                    <h4>Líquido LCI/LCA</h4>
-                                    <p>{formatCurrency(results.netAmountLca)}</p>
-                                </div>
-                                <div className="summary-item">
-                                    <h4>Líquido Poupança</h4>
-                                    <p>{formatCurrency(results.netAmountPoupanca)}</p>
-                                </div>
-                            </div>
-                            <h4>Taxas Efetivas Mensais</h4>
                              <div className="table-container">
                                 <table>
                                     <thead>
                                         <tr>
-                                            <th style={{textAlign: 'left'}}>Investimento</th>
-                                            <th>Taxa Bruta (% a.m.)</th>
-                                            <th>Taxa Líquida (% a.m.)</th>
+                                            <th>Prazo</th>
+                                            <th>Valor Bruto</th>
+                                            <th>Juros</th>
+                                            <th>IOF</th>
+                                            <th>Valor Líquido</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {results.rates.map((row: any) => (
-                                            <tr key={row.name}>
-                                                <td style={{textAlign: 'left'}}>{row.name}</td>
-                                                <td>{row.gross.toFixed(4)}%</td>
-                                                <td>{row.net.toFixed(4)}%</td>
+                                        {results.detailedChecks.map((check, index) => (
+                                            <tr key={index}>
+                                                <td data-label="Prazo">{check.days} dias</td>
+                                                <td data-label="Valor Bruto">{formatCurrency(check.value)}</td>
+                                                <td data-label="Juros" className="negative">{formatCurrency(check.interest)}</td>
+                                                <td data-label="IOF" className="negative">{formatCurrency(check.iof)}</td>
+                                                <td data-label="Valor Líquido" className="positive">{formatCurrency(check.netValue)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
                                 </table>
                             </div>
-
-                            <div className="no-print">
-                                {!showDetailedStatement && (
-                                    <button className="btn" onClick={() => setShowDetailedStatement(true)} style={{marginTop: '20px'}}>
-                                        Criar Demonstrativo Detalhado
-                                    </button>
-                                )}
-                                <button className="btn" onClick={() => window.print()}>Exportar para PDF</button>
-                            </div>
-
-                            {showDetailedStatement && results.detailedTable.length > 0 && (
-                                <div className="detailed-analysis-section" style={{ marginTop: '30px' }}>
-                                    <h4 style={{marginBottom: '15px'}}>Demonstrativo Detalhado (Evolução Mensal)</h4>
-                                    <div className="table-container">
-                                        <table>
-                                            <thead>
-                                                <tr>
-                                                    <th style={{textAlign: 'left'}}>Mês</th>
-                                                    <th>Saldo CDB/RDC</th>
-                                                    <th>Saldo LCI/LCA</th>
-                                                    <th>Saldo Poupança</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {results.detailedTable.map((row: any) => (
-                                                    <tr key={row.month}>
-                                                        <td style={{textAlign: 'left'}}>{row.month}</td>
-                                                        <td>{formatCurrency(row.cdbBalance)}</td>
-                                                        <td>{formatCurrency(row.lcaBalance)}</td>
-                                                        <td>{formatCurrency(row.poupancaBalance)}</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                    <p style={{fontSize: '0.8rem', color: '#666', marginTop: '10px', fontStyle: 'italic'}}>
-                                        Nota: A tabela exibe a evolução para meses completos. Os valores finais nos cards acima são mais precisos pois consideram o período exato em dias.
-                                    </p>
-
-                                    <h4 style={{marginTop: '30px', marginBottom: '15px'}}>Custo do Imposto de Renda (CDB/RDC)</h4>
-                                    <div className="summary-item" style={{textAlign: 'left', padding: '20px'}}>
-                                        <div className="cdb-breakdown" style={{borderTop: 'none', paddingTop: 0, marginTop: 0}}>
-                                            <div>
-                                                <span>Rendimento Bruto Total:</span>
-                                                <span>{formatCurrency(results.grossYieldCdb)}</span>
-                                            </div>
-                                            <div>
-                                                <span>Alíquota de IR ({results.taxRateCdb * 100}%):</span>
-                                                <span className="ir-value">-{formatCurrency(results.taxAmountCdb)}</span>
-                                            </div>
-                                            <div style={{borderTop: '1px solid var(--border-color)', paddingTop: '10px', marginTop: '10px'}}>
-                                                <span>Rendimento Líquido:</span>
-                                                <strong>{formatCurrency(results.grossYieldCdb - results.taxAmountCdb)}</strong>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                             {showDetailedStatement && results.detailedTable.length === 0 && (
-                                <div className="detailed-analysis-section no-print" style={{ marginTop: '30px' }}>
-                                    <p>O demonstrativo detalhado só está disponível para períodos de 1 mês ou mais.</p>
-                                </div>
-                            )}
-
+                            <div className="no-print" style={{display: 'flex', gap: '10px', marginTop: '20px'}}>
+                               <button className="btn btn-save" onClick={handleSave}>Salvar Simulação</button>
+                               <button className="btn btn-secondary" onClick={viewHistory}>Ver Histórico</button>
+                               <button className="btn" onClick={handlePrint} style={{backgroundColor: '#007bff'}}>Exportar para PDF</button>
+                           </div>
                         </>
                     ) : (
-                         <div className="no-results">
-                            <div className="icon">💡</div>
-                            <p>Preencha os dados para comparar os investimentos.</p>
+                        <div className="no-results">
+                            <div className="icon">📄</div>
+                            <p>Preencha os dados da operação para ver o resultado.</p>
                         </div>
                     )}
                 </div>
@@ -1827,149 +1117,37 @@ const FinancialInvestmentSimulator = ({ onBack }: { onBack: () => void }) => {
     );
 };
 
+const EconomicIndicators = ({ goBack }) => {
+    const [loading, setLoading] = useState(true);
+    const [indicators, setIndicators] = useState([
+        { name: 'CDI', value: '14,90% a.a.' },
+        { name: 'SELIC', value: '15,00% a.a.' },
+        { name: 'IPCA', value: '3,93% a.a.' },
+        { name: 'Dólar', value: 'R$ 5,43' },
+    ]);
+    
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setLoading(false);
+        }, 1500);
+        return () => clearTimeout(timer);
+    }, []);
 
-const DetailedLineChart = ({ data, yLabel = 'Valor (%)' }: { data: {date: Date, value: number}[], yLabel?: string }) => {
-    const width = 800;
-    const height = 400;
-    const margin = { top: 20, right: 30, bottom: 60, left: 60 };
-
-    if (!data || data.length < 2) {
-        return <div className="no-results" style={{height: `${height}px`, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-            <p>Dados insuficientes para exibir o gráfico.</p>
-        </div>;
+    if (loading) {
+        return (
+            <div className="indicators-container" style={{ textAlign: 'center' }}>
+                <h3>Indicadores Econômicos</h3>
+                <p>Buscando dados atualizados...</p>
+            </div>
+        );
     }
     
-    const xMin = data[0].date.getTime();
-    const xMax = data[data.length - 1].date.getTime();
-    
-    const yValues = data.map(d => d.value);
-    const yMin = Math.min(...yValues);
-    const yMax = Math.max(...yValues);
-    const yRange = yMax - yMin === 0 ? 1 : yMax - yMin;
-
-    const getX = (time: number) => margin.left + (time - xMin) / (xMax - xMin) * (width - margin.left - margin.right);
-    const getY = (value: number) => height - margin.bottom - (value - yMin) / yRange * (height - margin.top - margin.bottom);
-
-    const path = data.map(d => `${getX(d.date.getTime())},${getY(d.value)}`).join(' L ');
-    
-    // Axis Ticks
-    const numYTicks = 5;
-    const yTicks = Array.from({ length: numYTicks + 1 }, (_, i) => yMin + (yRange / numYTicks) * i);
-
-    const numXTicks = Math.min(6, data.length);
-    const xTicks = Array.from({ length: numXTicks }, (_, i) => {
-        const index = Math.floor(i * (data.length -1) / (numXTicks -1));
-        return data[index];
-    });
-
-
-    return (
-        <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height: 'auto' }}>
-            {/* Y Axis */}
-            <line x1={margin.left} y1={margin.top} x2={margin.left} y2={height - margin.bottom} stroke="var(--border-color)" />
-            {yTicks.map((tick, i) => (
-                <g key={i}>
-                    <line x1={margin.left} y1={getY(tick)} x2={width - margin.right} y2={getY(tick)} stroke="#e0e0e0" strokeDasharray="3,3" />
-                    <text x={margin.left - 10} y={getY(tick) + 5} textAnchor="end" fill="#666" fontSize="12" fontFamily="Poppins, sans-serif">{tick.toFixed(2)}</text>
-                </g>
-            ))}
-             <text transform={`translate(${margin.left/2 - 10}, ${height/2}) rotate(-90)`} textAnchor="middle" fill="#333" fontSize="14" fontFamily="Poppins, sans-serif">{yLabel}</text>
-
-            {/* X Axis */}
-            <line x1={margin.left} y1={height - margin.bottom} x2={width - margin.right} y2={height - margin.bottom} stroke="var(--border-color)" />
-            {xTicks.map((tick, i) => (
-                <g key={i}>
-                    <text x={getX(tick.date.getTime())} y={height - margin.bottom + 20} textAnchor="middle" fill="#666" fontSize="12" fontFamily="Poppins, sans-serif">
-                        {tick.date.toLocaleDateString('pt-BR')}
-                    </text>
-                </g>
-            ))}
-            
-            {/* Data Line */}
-            <path d={`M ${path}`} fill="none" stroke="var(--primary-color)" strokeWidth="2" />
-        </svg>
-    );
-};
-
-const generateHistoricalData = (days: number, startValue: number, volatility: number) => {
-    const data: { date: Date; value: number }[] = [];
-    let currentValue = startValue;
-    const today = new Date();
-    for (let i = 0; i < days; i++) {
-        const date = new Date(today);
-        date.setDate(today.getDate() - i);
-        data.push({ date, value: currentValue });
-        const change = (Math.random() - 0.49) * volatility;
-        currentValue += change;
-        if (currentValue < 0) currentValue = 0.01;
-    }
-    return data.reverse();
-};
-
-const EconomicIndicators = ({ onBack }: { onBack: () => void }) => {
-    const allIndicatorsData = useMemo(() => ({
-        cdi: { name: 'CDI', data: generateHistoricalData(1825, 10.50, 0.02), unit: '%' },
-        selic: { name: 'SELIC', data: generateHistoricalData(1825, 10.50, 0.02), unit: '%' },
-        ipca: { name: 'IPCA', data: generateHistoricalData(1825, 3.93, 0.1), unit: '%' },
-        usdbrl: { name: 'Dólar', data: generateHistoricalData(1825, 5.25, 0.03), unit: 'R$' }
-    }), []);
-
-    type IndicatorKey = 'cdi' | 'selic' | 'ipca' | 'usdbrl';
-    type PeriodKey = '30d' | '3m' | '6m' | '1y' | '2y' | '5y' | 'custom';
-
-    const [activeIndicator, setActiveIndicator] = useState<IndicatorKey>('cdi');
-    const [activePeriod, setActivePeriod] = useState<PeriodKey>('1y');
-    
-    const todayStr = new Date().toISOString().split('T')[0];
-    const oneYearAgo = new Date();
-    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-    
-    const [customStartDate, setCustomStartDate] = useState(oneYearAgo.toISOString().split('T')[0]);
-    const [customEndDate, setCustomEndDate] = useState(todayStr);
-
-    const chartData = useMemo(() => {
-        const fullData = allIndicatorsData[activeIndicator].data;
-        if (activePeriod === 'custom') {
-            const start = new Date(customStartDate);
-            const end = new Date(customEndDate);
-            return fullData.filter(d => d.date >= start && d.date <= end);
-        }
-
-        const endDate = new Date();
-        const startDate = new Date();
-        
-        switch(activePeriod) {
-            case '30d': startDate.setDate(endDate.getDate() - 30); break;
-            case '3m': startDate.setMonth(endDate.getMonth() - 3); break;
-            case '6m': startDate.setMonth(endDate.getMonth() - 6); break;
-            case '1y': startDate.setFullYear(endDate.getFullYear() - 1); break;
-            case '2y': startDate.setFullYear(endDate.getFullYear() - 2); break;
-            case '5y': startDate.setFullYear(endDate.getFullYear() - 5); break;
-        }
-        
-        return fullData.filter(d => d.date >= startDate && d.date <= endDate);
-
-    }, [activeIndicator, activePeriod, allIndicatorsData, customStartDate, customEndDate]);
-
-    const currentValues = {
-        cdi: { name: 'CDI', value: `${allIndicatorsData.cdi.data[allIndicatorsData.cdi.data.length - 1].value.toFixed(2)}% a.a.` },
-        selic: { name: 'SELIC', value: `${allIndicatorsData.selic.data[allIndicatorsData.selic.data.length - 1].value.toFixed(2)}% a.a.` },
-        ipca: { name: 'IPCA', value: `${allIndicatorsData.ipca.data[allIndicatorsData.ipca.data.length - 1].value.toFixed(2)}% a.a.` },
-        usdbrl: { name: 'Dólar (USD/BRL)', value: `R$ ${allIndicatorsData.usdbrl.data[allIndicatorsData.usdbrl.data.length - 1].value.toFixed(2)}` },
-    };
-
-    const activeIndicatorData = allIndicatorsData[activeIndicator];
-    const yLabel = activeIndicatorData.unit === 'R$' 
-        ? `${activeIndicatorData.name} (${activeIndicatorData.unit})` 
-        : `${activeIndicatorData.name} (%)`;
-
     return (
         <div className="indicators-container">
-            <h3>Principais Indicadores Econômicos</h3>
-             <p style={{ color: '#666', marginTop: '-15px', marginBottom: '20px' }} className="no-print">Valores atuais e tendências históricas (dados simulados).</p>
+            <h3>Indicadores Econômicos</h3>
             <div className="indicators-grid">
-                {Object.values(currentValues).map(indicator => (
-                    <div key={indicator.name} className="indicator-card">
+                {indicators.map(indicator => (
+                    <div className="indicator-card" key={indicator.name}>
                         <div className="indicator-header">
                             <h4>{indicator.name}</h4>
                             <p>{indicator.value}</p>
@@ -1977,247 +1155,128 @@ const EconomicIndicators = ({ onBack }: { onBack: () => void }) => {
                     </div>
                 ))}
             </div>
-            
-            <div className="detailed-analysis-section">
-                <h3 style={{border: 'none', padding: 0, marginBottom: '20px'}}>Análise Detalhada</h3>
-                <div className="indicator-tabs no-print">
-                    {(Object.keys(allIndicatorsData) as IndicatorKey[]).map(key => (
-                        <button key={key} onClick={() => setActiveIndicator(key)} className={activeIndicator === key ? 'active' : ''}>
-                           {allIndicatorsData[key].name}
-                        </button>
-                    ))}
-                </div>
-                 <div className="period-filters no-print">
-                    {(['30d', '3m', '6m', '1y', '2y', '5y', 'custom'] as PeriodKey[]).map(key => (
-                        <button key={key} onClick={() => setActivePeriod(key)} className={activePeriod === key ? 'active' : ''}>
-                           {key === '30d' && '30 Dias'}
-                           {key === '3m' && '3 Meses'}
-                           {key === '6m' && '6 Meses'}
-                           {key === '1y' && '1 Ano'}
-                           {key === '2y' && '2 Anos'}
-                           {key === '5y' && '5 Anos'}
-                           {key === 'custom' && 'Personalizado'}
-                        </button>
-                    ))}
-                </div>
-
-                {activePeriod === 'custom' && (
-                    <div className="custom-period-filter form-group inline no-print" style={{gap: '20px', alignItems: 'center'}}>
-                       <div>
-                         <label htmlFor="startDate">Data de Início</label>
-                         <input id="startDate" type="date" value={customStartDate} onChange={e => setCustomStartDate(e.target.value)} />
-                       </div>
-                       <div>
-                         <label htmlFor="endDate">Data de Fim</label>
-                         <input id="endDate" type="date" value={customEndDate} onChange={e => setCustomEndDate(e.target.value)} />
-                       </div>
-                    </div>
-                )}
-                
-                <div className="chart-wrapper">
-                    <DetailedLineChart data={chartData} yLabel={yLabel} />
-                </div>
-            </div>
-            <button className="btn no-print" onClick={() => window.print()} style={{maxWidth: '350px', margin: '20px auto 0', display: 'block'}}>Exportar para PDF</button>
-            <button className="btn btn-secondary no-print" style={{maxWidth: '350px', margin: '10px auto 0', display: 'block'}} onClick={onBack}>Voltar</button>
+            <button className="btn btn-secondary no-print" onClick={goBack} style={{marginTop: '30px'}}>Voltar</button>
         </div>
     );
 };
 
-const HistoryScreen = ({ calculations, onBack, onClear, onViewDetail }: { calculations: Calculation[], onBack: () => void, onClear: () => void, onViewDetail: (calc: Calculation) => void }) => (
-    <div className="history-container">
-        <h3>Histórico de Cálculos</h3>
-        {calculations.length > 0 ? (
-            <div className="history-list">
-                {[...calculations].reverse().map(calc => (
-                    <div key={calc.id} className="history-item" onClick={() => onViewDetail(calc)}>
-                        <div className="history-item-header">
-                            <h4>{calc.type}</h4>
-                            <span className="no-print">{new Date(calc.id).toLocaleString('pt-BR')}</span>
+const History = ({ goBack, history, viewDetails, deleteSimulation }) => {
+    return (
+        <div className="history-container">
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                 <h3>Histórico de Simulações</h3>
+                 <button className="btn btn-secondary no-print" onClick={goBack}>Voltar</button>
+            </div>
+            {history.length > 0 ? (
+                 <div className="history-list">
+                    {history.map(item => (
+                        <div key={item.id} className="history-item">
+                           <div onClick={() => viewDetails(item.id)}>
+                             <div className="history-item-header">
+                                 <h4>{item.type}</h4>
+                                 <span>{formatDate(item.date)}</span>
+                             </div>
+                             <p>Resultado: {formatCurrency(item.netAmountToReceive || item.netAmount)}</p>
+                           </div>
+                           <div style={{textAlign: 'right', marginTop: '10px'}} className="no-print">
+                               <button className="btn btn-danger btn-small" onClick={(e) => { e.stopPropagation(); deleteSimulation(item.id); }}>Excluir</button>
+                           </div>
                         </div>
-                        <p>{calc.description}</p>
-                    </div>
-                ))}
-            </div>
-        ) : (
-            <div className="no-results">
-                <div className="icon">📂</div>
-                <p>Nenhuma simulação salva ainda.</p>
-            </div>
-        )}
-        <div style={{ maxWidth: '350px', margin: '0 auto' }} className="no-print">
-            {calculations.length > 0 && <button className="btn btn-danger" onClick={onClear}>Limpar Histórico</button>}
-            <button className="btn btn-secondary" onClick={onBack}>Voltar</button>
+                    ))}
+                 </div>
+            ) : (
+                <div className="no-results">
+                    <div className="icon">🗂️</div>
+                    <p>Nenhuma simulação salva ainda.</p>
+                </div>
+            )}
         </div>
-    </div>
-);
-
-const HomeScreen = ({ onNavigate }: { onNavigate: (page: string) => void }) => {
-  return (
-    <>
-      <div className="header">
-        <h1>Salva Bancário</h1>
-        <p>Suas ferramentas financeiras em um só lugar.</p>
-      </div>
-      <div className="card-grid">
-        <div className="feature-card" onClick={() => onNavigate('loanCalculator')}>
-          <div className="icon">🏦</div>
-          <h2>Calculadora de Empréstimo</h2>
-          <p>Simule empréstimos com sistemas Price e SAC.</p>
-        </div>
-        <div className="feature-card" onClick={() => onNavigate('checkDiscount')}>
-          <div className="icon">📄</div>
-          <h2>Antecipação de Cheques</h2>
-          <p>Calcule o desconto de cheques e taxas aplicadas.</p>
-        </div>
-        <div className="feature-card" onClick={() => onNavigate('ruralFinancing')}>
-          <div className="icon">🌾</div>
-          <h2>Financiamento Rural</h2>
-          <p>Simule com carência e parcelamento anual.</p>
-        </div>
-        <div className="feature-card" onClick={() => onNavigate('investmentSimulator')}>
-          <div className="icon">💰</div>
-          <h2>Simulador de Aplicação</h2>
-          <p>Compare CDB, LCI/LCA e Poupança.</p>
-        </div>
-        <div className="feature-card" onClick={() => onNavigate('competitorRateChecker')}>
-          <div className="icon">🕵️</div>
-          <h2>Taxa Concorrente</h2>
-          <p>Descubra os juros reais de um financiamento.</p>
-        </div>
-        <div className="feature-card" onClick={() => onNavigate('economicIndicators')}>
-          <div className="icon">📈</div>
-          <h2>Indicadores Econômicos</h2>
-          <p>Acompanhe CDI, IPCA, Selic e mais.</p>
-        </div>
-         <div className="feature-card" onClick={() => onNavigate('history')}>
-          <div className="icon">💾</div>
-          <h2>Histórico de Cálculos</h2>
-          <p>Veja suas simulações salvas.</p>
-        </div>
-      </div>
-    </>
-  );
+    );
 };
 
-const HistoryDetailModal = ({ calculation, onClose }: { calculation: Calculation, onClose: () => void }) => {
-    if (!calculation) return null;
+const HistoryDetailModal = ({ simulation, onClose, onDelete }) => {
+    if (!simulation) return null;
 
-    const renderDetail = () => {
-        const { type, data } = calculation;
-        const { results } = data;
-        
-        switch (type) {
-            case 'Empréstimo':
-                const firstInstallment = results.table[0]?.installment ?? 0;
-                const { inputs } = data;
-                return (
-                    <>
-                        <div className="results-summary">
-                            <div className="summary-item"><h4>Valor da Parcela</h4><p>{formatCurrency(firstInstallment)}{inputs.amortizationType === 'sac' && <span style={{fontSize: '0.8rem', display: 'block'}}>(primeira)</span>}</p></div>
-                             {inputs.amortizationType === 'sac' && results.lastInstallment && (
-                                <div className="summary-item">
-                                    <h4>Última Parcela</h4>
-                                    <p>{formatCurrency(results.lastInstallment)}</p>
-                                </div>
-                             )}
-                            <div className="summary-item"><h4>Total de Juros</h4><p>{formatCurrency(results.totalInterest)}</p></div>
-                            <div className="summary-item"><h4>Total Pago</h4><p>{formatCurrency(results.totalPaid)}</p></div>
-                            {results.calculatedIof > 0 &&
-                                <div className="summary-item">
-                                    <h4>IOF Calculado</h4>
-                                    <p>{formatCurrency(results.calculatedIof)}</p>
-                                </div>
-                            }
-                            {inputs.financeIof && results.calculatedIof > 0 &&
-                                <div className="summary-item">
-                                    <h4>Valor Financiado</h4>
-                                    <p>{formatCurrency(parseFloat(inputs.amount.replace(',', '.')) + results.calculatedIof)}</p>
-                                </div>
-                            }
-                        </div>
-                        <h4>Demonstrativo Analítico</h4>
-                        <div className="table-container">
-                            <table>
-                                <thead><tr><th>Mês</th><th>Parcela</th><th>Juros</th><th>Amortização</th><th>Saldo Devedor</th></tr></thead>
-                                <tbody>{results.table.map((row: AmortizationRow) => (<tr key={row.month}><td>{row.month}</td><td>{formatCurrency(row.installment)}</td><td>{formatCurrency(row.interest)}</td><td>{formatCurrency(row.amortization)}</td><td>{formatCurrency(row.balance)}</td></tr>))}</tbody>
-                            </table>
-                        </div>
-                    </>
-                );
-             case 'Antecipação de Cheques':
-                return (
-                     <div className="results-summary" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
-                        <div className="summary-item"><h4>Valor Líquido a Receber</h4><p>{formatCurrency(results.netAmount)}</p></div>
-                        <div className="summary-item">
-                            <h4>Custo Total da Operação</h4>
-                            <p>{formatCurrency(results.totalCost)}</p>
-                            {results.totalInterest !== undefined && results.tacValue !== undefined && (
-                                <div className="cdb-breakdown">
-                                    <div>
-                                        <span>Juros:</span>
-                                        <span>{formatCurrency(results.totalInterest)}</span>
-                                    </div>
-                                    <div>
-                                        <span>TAC:</span>
-                                        <span>{formatCurrency(results.tacValue)}</span>
-                                    </div>
-                                    <div>
-                                        <span>IOF:</span>
-                                        <span>{formatCurrency(results.calculatedIof)}</span>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                        <div className="summary-item"><h4>Valor Bruto dos Cheques</h4><p>{formatCurrency(results.originalValue)}</p></div>
-                        {results.calculatedIof !== undefined && (
-                            <div className="summary-item"><h4>IOF Calculado</h4><p>{formatCurrency(results.calculatedIof)}</p></div>
-                        )}
-                    </div>
-                )
-             case 'Financiamento Rural':
-                 const firstAmortInstallment = results.table.find((r: RuralAmortizationRow) => r.amortization > 0)?.installment ?? 0;
-                return (
-                    <>
-                         <div className="results-summary">
-                            <div className="summary-item"><h4>Juros na Carência</h4><p>{formatCurrency(results.graceInterest)}</p></div>
-                            <div className="summary-item"><h4>Primeira Parcela</h4><p>{formatCurrency(firstAmortInstallment)}</p></div>
-                            {data.inputs.amortizationType === 'sac' && results.lastInstallment && (
-                                <div className="summary-item">
-                                    <h4>Última Parcela</h4>
-                                    <p>{formatCurrency(results.lastInstallment)}</p>
-                                </div>
-                            )}
-                            <div className="summary-item"><h4>Total Pago</h4><p>{formatCurrency(results.totalPaid)}</p></div>
-                        </div>
-                        <h4>Demonstrativo Analítico</h4>
-                        <div className="table-container">
-                            <table>
-                                <thead><tr><th>Período</th><th>Parcela</th><th>Juros</th><th>Amortização</th><th>Saldo Devedor</th></tr></thead>
-                                <tbody>{results.table.map((row: RuralAmortizationRow) => (<tr key={row.period}><td>{row.period}</td><td>{formatCurrency(row.installment)}</td><td>{formatCurrency(row.interest)}</td><td>{formatCurrency(row.amortization)}</td><td>{formatCurrency(row.balance)}</td></tr>))}</tbody>
-                            </table>
-                        </div>
-                    </>
-                )
-            default:
-                return <p>Detalhes não disponíveis para este tipo de cálculo.</p>;
-        }
+    useEffect(() => {
+        document.body.classList.add('modal-open');
+        return () => {
+            document.body.classList.remove('modal-open');
+        };
+    }, []);
+
+    const handlePrint = () => {
+        window.print();
     };
 
     return (
-        <div className="modal-backdrop" onClick={onClose}>
-            <div className="modal-content" onClick={e => e.stopPropagation()}>
-                <div className="modal-header">
-                    <h3>{calculation.type}</h3>
-                    <button className="modal-close-btn no-print" onClick={onClose}>&times;</button>
+        <div className="modal-backdrop">
+            <div className="modal-content">
+                <div className="modal-header no-print">
+                    <h3>Detalhes da Simulação</h3>
+                    <button onClick={onClose} className="modal-close-btn">&times;</button>
                 </div>
-                <p style={{ color: '#666', marginTop: '-15px', marginBottom: '20px' }}>
-                    Salvo em: {new Date(calculation.id).toLocaleString('pt-BR')}
-                </p>
-                {renderDetail()}
-                 <button className="btn no-print" onClick={() => window.print()} style={{marginTop: '20px'}}>
-                    Exportar para PDF
-                </button>
+                
+                 <div className="print-only">
+                    <h3>Relatório de Simulação - {simulation.type}</h3>
+                    <p><strong>Data da Simulação:</strong> {formatDate(simulation.date)}</p>
+                </div>
+                
+                {simulation.type === 'Antecipação de Cheques' ? (
+                     <>
+                        <div className="results-summary">
+                            <div className="summary-item">
+                                <h4>Valor Líquido a Receber</h4>
+                                <p className="positive">{formatCurrency(simulation.netAmountToReceive)}</p>
+                            </div>
+                            <div className="summary-item">
+                                <h4>Custo Total da Operação</h4>
+                                <p className="negative">{formatCurrency(simulation.totalOperationCost)}</p>
+                                <div className="cdb-breakdown">
+                                    <div><span>Juros:</span> <span>{formatCurrency(simulation.totalInterest)}</span></div>
+                                    <div><span>TAC:</span> <span>{formatCurrency(simulation.parsedTac)}</span></div>
+                                    <div><span>IOF:</span> <span>{formatCurrency(simulation.totalIof)}</span></div>
+                                </div>
+                            </div>
+                            <div className="summary-item">
+                                <h4>Valor Bruto dos Cheques</h4>
+                                <p>{formatCurrency(simulation.totalGrossValue)}</p>
+                            </div>
+                        </div>
+                         <div className="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Prazo</th>
+                                        <th>Valor Bruto</th>
+                                        <th>Juros</th>
+                                        <th>IOF</th>
+                                        <th>Valor Líquido</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {simulation.detailedChecks.map((check, index) => (
+                                        <tr key={index}>
+                                            <td data-label="Prazo">{check.days} dias</td>
+                                            <td data-label="Valor Bruto">{formatCurrency(check.value)}</td>
+                                            <td data-label="Juros" className="negative">{formatCurrency(check.interest)}</td>
+                                            <td data-label="IOF" className="negative">{formatCurrency(check.iof)}</td>
+                                            <td data-label="Valor Líquido" className="positive">{formatCurrency(check.netValue)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </>
+                ) : (
+                     <div className="results-summary">
+                        {/* Details for Financial Investment */}
+                    </div>
+                )}
+                <div className="no-print" style={{display: 'flex', gap: '10px', marginTop: '30px'}}>
+                    <button className="btn btn-secondary" onClick={onClose}>Fechar</button>
+                    <button className="btn" onClick={handlePrint} style={{backgroundColor: '#007bff'}}>Exportar para PDF</button>
+                    <button className="btn btn-danger" onClick={() => onDelete(simulation.id)}>Excluir</button>
+                </div>
             </div>
         </div>
     );
@@ -2226,80 +1285,112 @@ const HistoryDetailModal = ({ calculation, onClose }: { calculation: Calculation
 
 const App = () => {
   const [currentPage, setCurrentPage] = useState('home');
-  const [viewingCalculation, setViewingCalculation] = useState<Calculation | null>(null);
-  const [savedCalculations, setSavedCalculations] = useState<Calculation[]>(() => {
+  const [history, setHistory] = useState(() => {
     try {
-        const item = window.localStorage.getItem('savedCalculations');
-        return item ? JSON.parse(item) : [];
+        const savedHistory = localStorage.getItem('simulationHistory');
+        return savedHistory ? JSON.parse(savedHistory) : [];
     } catch (error) {
-        console.error("Failed to parse saved calculations:", error);
+        console.error("Could not parse history from localStorage", error);
         return [];
     }
   });
 
+  const [selectedSimulationId, setSelectedSimulationId] = useState(null);
+
   useEffect(() => {
     try {
-        window.localStorage.setItem('savedCalculations', JSON.stringify(savedCalculations));
+        localStorage.setItem('simulationHistory', JSON.stringify(history));
     } catch (error) {
-        console.error("Failed to save calculations:", error);
+        console.error("Could not save history to localStorage", error);
     }
-  }, [savedCalculations]);
-
-  useEffect(() => {
-    const body = document.body;
-    if (viewingCalculation) {
-        body.classList.add('modal-open');
-    } else {
-        body.classList.remove('modal-open');
-    }
-    return () => {
-      body.classList.remove('modal-open');
-    };
-  }, [viewingCalculation]);
-
-  const handleSaveCalculation = (calculation: Omit<Calculation, 'id'>) => {
-    setSavedCalculations(prev => [...prev, { ...calculation, id: Date.now() }]);
+  }, [history]);
+  
+  const saveSimulation = (simulationData) => {
+    // Fix: Explicitly convert Date objects to numbers using getTime() before subtraction to satisfy TypeScript's type checker.
+    setHistory(prevHistory => [...prevHistory, simulationData].sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
   };
 
-  const handleClearHistory = () => {
-    if (window.confirm('Tem certeza que deseja limpar todo o histórico? Esta ação não pode ser desfeita.')) {
-        setSavedCalculations([]);
-    }
+  const deleteSimulation = (id) => {
+      if(window.confirm('Tem certeza que deseja excluir esta simulação?')) {
+        setHistory(prevHistory => prevHistory.filter(item => item.id !== id));
+        if (selectedSimulationId === id) {
+            setSelectedSimulationId(null); // Close modal if the deleted item was open
+        }
+      }
   };
+
+  const viewDetails = (id) => {
+      setSelectedSimulationId(id);
+  };
+
+  const closeDetails = () => {
+      setSelectedSimulationId(null);
+  }
+  
+  const selectedSimulation = useMemo(() => {
+      return history.find(sim => sim.id === selectedSimulationId) || null;
+  }, [history, selectedSimulationId]);
+
 
   const renderPage = () => {
     switch (currentPage) {
-      case 'loanCalculator':
-        return <LoanCalculator onBack={() => setCurrentPage('home')} onSave={handleSaveCalculation} />;
-      case 'checkDiscount':
-        return <CheckDiscountCalculator onBack={() => setCurrentPage('home')} onSave={handleSaveCalculation} />;
-      case 'ruralFinancing':
-        return <RuralFinancingCalculator onBack={() => setCurrentPage('home')} onSave={handleSaveCalculation} />;
-       case 'competitorRateChecker':
-        return <CompetitorRateChecker onBack={() => setCurrentPage('home')} />;
-      case 'investmentSimulator':
-        return <FinancialInvestmentSimulator onBack={() => setCurrentPage('home')} />;
-      case 'economicIndicators':
-        return <EconomicIndicators onBack={() => setCurrentPage('home')} />;
+      case 'investment':
+        return <FinancialInvestmentSimulator goBack={() => setCurrentPage('home')} />;
+      case 'check':
+        return <CheckAnticipationCalculator goBack={() => setCurrentPage('home')} saveSimulation={saveSimulation} viewHistory={() => setCurrentPage('history')} />;
+      case 'indicators':
+        return <EconomicIndicators goBack={() => setCurrentPage('home')} />;
       case 'history':
-        return <HistoryScreen calculations={savedCalculations} onBack={() => setCurrentPage('home')} onClear={handleClearHistory} onViewDetail={setViewingCalculation} />;
-      case 'home':
+        return <History goBack={() => setCurrentPage('home')} history={history} viewDetails={viewDetails} deleteSimulation={deleteSimulation} />;
       default:
-        return <HomeScreen onNavigate={setCurrentPage} />;
+        return (
+          <>
+            <div className="header">
+              <h1>Salva Bancário</h1>
+              <p>Seu canivete suíço de ferramentas financeiras.</p>
+            </div>
+            <div className="card-grid">
+              <div className="feature-card" onClick={() => setCurrentPage('investment')}>
+                <div className="icon">💰</div>
+                <h2>Simulador de Aplicação</h2>
+                <p>Calcule o rendimento de suas aplicações financeiras.</p>
+              </div>
+              <div className="feature-card" onClick={() => setCurrentPage('check')}>
+                <div className="icon">📄</div>
+                <h2>Antecipação de Cheques</h2>
+                <p>Simule a antecipação de seus recebíveis.</p>
+              </div>
+              <div className="feature-card" onClick={() => setCurrentPage('indicators')}>
+                <div className="icon">📈</div>
+                <h2>Indicadores Econômicos</h2>
+                <p>Acompanhe os principais indicadores do mercado.</p>
+              </div>
+              <div className="feature-card" onClick={() => setCurrentPage('history')}>
+                <div className="icon">📚</div>
+                <h2>Histórico</h2>
+                <p>Veja suas simulações salvas.</p>
+              </div>
+            </div>
+          </>
+        );
     }
   };
 
   return (
-    <>
+    <div className="app-container">
       <style>{styles}</style>
-      <div className="app-container">
-        {renderPage()}
-      </div>
-      {viewingCalculation && <HistoryDetailModal calculation={viewingCalculation} onClose={() => setViewingCalculation(null)} />}
-    </>
+      {renderPage()}
+      {selectedSimulation && (
+        <HistoryDetailModal 
+            simulation={selectedSimulation} 
+            onClose={closeDetails}
+            onDelete={deleteSimulation}
+        />
+      )}
+    </div>
   );
 };
 
 const container = document.getElementById('root');
-const root = createRoot(container!);
+const root = createRoot(container);
 root.render(<App />);
