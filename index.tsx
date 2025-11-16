@@ -3747,7 +3747,7 @@ const InterestRateConverter = () => {
                                             label={{ value: 'Montante (R$)', angle: -90, position: 'insideLeft', fill: 'var(--text-color)' }}
                                             tickFormatter={val => formatCurrency(val)}
                                         />
-                                        <RechartsTooltip 
+                                        <ChartTooltip 
                                             contentStyle={{
                                                 backgroundColor: 'var(--card-bg)',
                                                 border: '1px solid var(--border-color)',
