@@ -1804,34 +1804,52 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
 
         if (!principal || !numMonths || !cdiRate) return null;
 
-        // LCA/LCI Calculation (Tax-Free)
-        const monthlyLcaRate = cdiRate * lcaProf;
-        const finalValueLCA = principal * Math.pow(1 + monthlyLcaRate, numMonths);
+        const today = new Date();
+        const startYear = today.getFullYear();
+        const startMonth = today.getMonth();
+
+        let balanceLCA = principal;
+        let balanceCDB = principal;
+        const tableData = [];
+        const cdiByYear = {};
+
+        for (let i = 0; i < numMonths; i++) {
+            const futureMonth = startMonth + i;
+            const futureYear = startYear + Math.floor(futureMonth / 12);
+            const cdiAnnualForYear = getCDIForYear(settings, futureYear);
+            const monthlyCDIForYear = annualToMonthly(cdiAnnualForYear);
+
+            if (!cdiByYear[futureYear]) {
+                cdiByYear[futureYear] = cdiAnnualForYear;
+            }
+
+            const monthlyLcaRate = monthlyCDIForYear * lcaProf;
+            const monthlyCdbRate = monthlyCDIForYear * cdbProf;
+
+            balanceLCA *= (1 + monthlyLcaRate);
+            balanceCDB *= (1 + monthlyCdbRate);
+
+            tableData.push({
+                month: i + 1,
+                balanceLCA,
+                profitLCA: balanceLCA - principal,
+                balanceCDB,
+                profitCDB: balanceCDB - principal,
+                cdiRate: cdiAnnualForYear,
+                year: futureYear,
+            });
+        }
+
+        const finalValueLCA = balanceLCA;
         const profitLCA = finalValueLCA - principal;
 
-        // CDB/RDC Calculation (Taxable)
-        const monthlyCdbRate = cdiRate * cdbProf;
-        const finalValueCDBGross = principal * Math.pow(1 + monthlyCdbRate, numMonths);
+        const finalValueCDBGross = balanceCDB;
         const profitCDBGross = finalValueCDBGross - principal;
         const taxRate = getIncomeTaxRate(numMonths * 30);
         const taxAmount = profitCDBGross * taxRate;
         const finalValueCDBNet = finalValueCDBGross - taxAmount;
         const profitCDBNet = profitCDBGross - taxAmount;
 
-        const tableData = Array.from({ length: numMonths }, (_, i) => {
-            const month = i + 1;
-            const balanceLCA = principal * Math.pow(1 + monthlyLcaRate, month);
-            const balanceCDB = principal * Math.pow(1 + monthlyCdbRate, month);
-            return {
-                month,
-                balanceLCA,
-                profitLCA: balanceLCA - principal,
-                balanceCDB,
-                profitCDB: balanceCDB - principal,
-            };
-        });
-
-        // Calculate net return rates in percentage
         const netRateLCA = (profitLCA / principal) * 100;
         const netRateCDB = (profitCDBNet / principal) * 100;
 
@@ -1851,8 +1869,9 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
             tableData,
             lcaProfitability: lcaProf,
             cdbProfitability: cdbProf,
+            cdiByYear,
         };
-    }, [initialValue, months, lcaProfitability, cdbProfitability, cdiRate]);
+    }, [initialValue, months, lcaProfitability, cdbProfitability, cdiRate, settings]);
     
     const handleCalculate = () => {
         setResults(calculation);
@@ -1997,6 +2016,32 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                                 </div>
                             </div>
                             
+                            {results.cdiByYear && (
+                                <div style={{marginTop: '20px', padding: '15px', backgroundColor: 'var(--card-bg)', borderRadius: '8px', border: '1px solid var(--border-color)'}}>
+                                    <h5 style={{margin: '0 0 10px 0', color: 'var(--primary-color)', fontSize: '0.95rem'}}>📊 Taxas CDI Aplicadas</h5>
+                                    <p style={{fontSize: '0.85rem', color: 'var(--text-secondary-color)', marginBottom: '10px'}}>
+                                        {Object.keys(results.cdiByYear).length > 1 
+                                            ? 'Simulação com projeções multi-ano do Boletim Focus do BC:'
+                                            : 'Taxa CDI aplicada nesta simulação:'}
+                                    </p>
+                                    <div style={{display: 'flex', flexWrap: 'wrap', gap: '10px'}}>
+                                        {Object.entries(results.cdiByYear).map(([year, rate]) => (
+                                            <div key={year} style={{
+                                                padding: '8px 12px',
+                                                backgroundColor: 'var(--bg-color)',
+                                                borderRadius: '6px',
+                                                fontSize: '0.85rem',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '5px'
+                                            }}>
+                                                <strong>{year}:</strong> <span style={{color: 'var(--primary-color)'}}>{(rate * 100).toFixed(2)}%</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             <h4 style={{marginTop: '30px', marginBottom: '10px'}}>Evolução Mensal</h4>
                             <div className="table-container">
                                 <table>
@@ -2131,48 +2176,109 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
         let remainingBalance = effectivePrincipal;
         let monthlyPayment;
 
-        if (system === 'price') {
-            const factor = Math.pow(1 + monthlyRate, numMonths);
-            const denominator = factor - 1;
-            
-            if (Math.abs(denominator) < 0.000001) {
-                // Handle near-zero rate case analytically (flat amortization)
-                monthlyPayment = effectivePrincipal / numMonths;
-            } else {
-                monthlyPayment = effectivePrincipal * (monthlyRate * factor) / denominator;
-            }
-            
-            totalPaid = monthlyPayment * numMonths;
-            totalInterest = totalPaid - effectivePrincipal;
+        const today = new Date();
+        const startYear = today.getFullYear();
+        const startMonth = today.getMonth();
+        const fixedPart = isPostFixed ? parseFloat(fixedSpread) / 100 : 0;
+        const cdiByYear = {};
 
-            for (let i = 1; i <= numMonths; i++) {
-                const interestComponent = remainingBalance * monthlyRate;
-                const principalComponent = monthlyPayment - interestComponent;
-                remainingBalance -= principalComponent;
-                tableData.push({
-                    month: i,
-                    payment: monthlyPayment,
-                    principal: principalComponent,
-                    interest: interestComponent,
-                    balance: Math.abs(remainingBalance),
-                });
+        if (system === 'price') {
+            if (!isPostFixed) {
+                const factor = Math.pow(1 + monthlyRate, numMonths);
+                const denominator = factor - 1;
+                
+                if (Math.abs(denominator) < 0.000001) {
+                    monthlyPayment = effectivePrincipal / numMonths;
+                } else {
+                    monthlyPayment = effectivePrincipal * (monthlyRate * factor) / denominator;
+                }
+                
+                totalPaid = monthlyPayment * numMonths;
+                totalInterest = totalPaid - effectivePrincipal;
+
+                for (let i = 1; i <= numMonths; i++) {
+                    const interestComponent = remainingBalance * monthlyRate;
+                    const principalComponent = monthlyPayment - interestComponent;
+                    remainingBalance -= principalComponent;
+                    tableData.push({
+                        month: i,
+                        payment: monthlyPayment,
+                        principal: principalComponent,
+                        interest: interestComponent,
+                        balance: Math.abs(remainingBalance),
+                    });
+                }
+            } else {
+                for (let i = 1; i <= numMonths; i++) {
+                    const futureMonth = startMonth + (i - 1);
+                    const futureYear = startYear + Math.floor(futureMonth / 12);
+                    const cdiAnnualForYear = getCDIForYear(settings, futureYear);
+                    const monthlyCDIForYear = annualToMonthly(cdiAnnualForYear);
+                    const currentMonthlyRate = monthlyCDIForYear + fixedPart;
+
+                    if (!cdiByYear[futureYear]) {
+                        cdiByYear[futureYear] = cdiAnnualForYear;
+                    }
+
+                    const interestComponent = remainingBalance * currentMonthlyRate;
+                    const principalComponent = effectivePrincipal / numMonths;
+                    const payment = principalComponent + interestComponent;
+                    
+                    remainingBalance -= principalComponent;
+                    totalPaid += payment;
+                    totalInterest += interestComponent;
+
+                    tableData.push({
+                        month: i,
+                        payment,
+                        principal: principalComponent,
+                        interest: interestComponent,
+                        balance: Math.abs(remainingBalance),
+                        cdiRate: cdiAnnualForYear,
+                        year: futureYear,
+                    });
+                }
             }
         } else { // SAC
             const principalComponent = effectivePrincipal / numMonths;
             for (let i = 1; i <= numMonths; i++) {
-                const interestComponent = remainingBalance * monthlyRate;
+                let currentMonthlyRate = monthlyRate;
+
+                if (isPostFixed) {
+                    const futureMonth = startMonth + (i - 1);
+                    const futureYear = startYear + Math.floor(futureMonth / 12);
+                    const cdiAnnualForYear = getCDIForYear(settings, futureYear);
+                    const monthlyCDIForYear = annualToMonthly(cdiAnnualForYear);
+                    currentMonthlyRate = monthlyCDIForYear + fixedPart;
+
+                    if (!cdiByYear[futureYear]) {
+                        cdiByYear[futureYear] = cdiAnnualForYear;
+                    }
+                }
+
+                const interestComponent = remainingBalance * currentMonthlyRate;
                 const payment = principalComponent + interestComponent;
                 remainingBalance -= principalComponent;
                 totalInterest += interestComponent;
-                tableData.push({
+                totalPaid += payment;
+                
+                const row = {
                     month: i,
                     payment: payment,
                     principal: principalComponent,
                     interest: interestComponent,
                     balance: Math.abs(remainingBalance),
-                });
+                };
+                
+                if (isPostFixed) {
+                    const futureMonth = startMonth + (i - 1);
+                    const futureYear = startYear + Math.floor(futureMonth / 12);
+                    row.cdiRate = getCDIForYear(settings, futureYear);
+                    row.year = futureYear;
+                }
+                
+                tableData.push(row);
             }
-            totalPaid = effectivePrincipal + totalInterest;
         }
 
         return {
@@ -2197,8 +2303,9 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
             totalInterest,
             totalCost: totalPaid + totalUpfrontCosts,
             tableData,
+            cdiByYear: isPostFixed ? cdiByYear : null,
         };
-    }, [loanAmount, months, system, effectiveInterestRate, isPostFixed, fixedSpread, cdiRate, iof, tac, financeIOF, settings.iofDiarioRate]);
+    }, [loanAmount, months, system, effectiveInterestRate, isPostFixed, fixedSpread, cdiRate, iof, tac, financeIOF, settings]);
 
     const handleCalculate = () => {
         setResults(calculation);
@@ -2383,6 +2490,36 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
                                     <p className="negative">{formatCurrency(results.totalCost)}</p>
                                 </div>
                             </div>
+                            
+                            {results.cdiByYear && (
+                                <div style={{marginTop: '20px', padding: '15px', backgroundColor: 'var(--card-bg)', borderRadius: '8px', border: '1px solid var(--border-color)'}}>
+                                    <h5 style={{margin: '0 0 10px 0', color: 'var(--primary-color)', fontSize: '0.95rem'}}>📊 Taxas CDI Aplicadas</h5>
+                                    <p style={{fontSize: '0.85rem', color: 'var(--text-secondary-color)', marginBottom: '10px'}}>
+                                        {Object.keys(results.cdiByYear).length > 1 
+                                            ? 'Empréstimo pós-fixado com projeções multi-ano do Boletim Focus do BC:'
+                                            : 'Taxa CDI aplicada neste empréstimo pós-fixado:'}
+                                    </p>
+                                    <div style={{display: 'flex', flexWrap: 'wrap', gap: '10px'}}>
+                                        {Object.entries(results.cdiByYear).map(([year, rate]) => (
+                                            <div key={year} style={{
+                                                padding: '8px 12px',
+                                                backgroundColor: 'var(--bg-color)',
+                                                borderRadius: '6px',
+                                                fontSize: '0.85rem',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '5px'
+                                            }}>
+                                                <strong>{year}:</strong> <span style={{color: 'var(--primary-color)'}}>{(rate * 100).toFixed(2)}%</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <p style={{fontSize: '0.75rem', color: 'var(--text-secondary-color)', marginTop: '10px', marginBottom: '0'}}>
+                                        Taxa final de cada mês = CDI do ano + {results.fixedSpread.toFixed(2)}% (spread fixo)
+                                    </p>
+                                </div>
+                            )}
+                             
                              <h4 style={{marginTop: '30px', marginBottom: '10px'}}>Tabela de Amortização</h4>
                             <div className="table-container">
                                 <table>
@@ -2419,6 +2556,7 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
 };
 
 const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
+    const { settings } = useSettings();
     const { cdiMonthly, cdiAnnual } = useCDI();
     
     const [initialDeposit, setInitialDeposit] = useState('R$ 0,00');
@@ -2441,14 +2579,28 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
 
         if (isNaN(numMonths) || numMonths <= 0 || !cdiRate) return null;
 
-        const monthlyLcaRate = cdiRate * lcaProf;
-        const monthlyCdbRate = cdiRate * cdbProf;
+        const today = new Date();
+        const startYear = today.getFullYear();
+        const startMonth = today.getMonth();
 
         let tableData = [];
         let currentBalanceLCA = principal;
         let currentBalanceCDB = principal;
+        const cdiByYear = {};
 
         for (let i = 1; i <= numMonths; i++) {
+            const futureMonth = startMonth + (i - 1);
+            const futureYear = startYear + Math.floor(futureMonth / 12);
+            const cdiAnnualForYear = getCDIForYear(settings, futureYear);
+            const monthlyCDIForYear = annualToMonthly(cdiAnnualForYear);
+
+            if (!cdiByYear[futureYear]) {
+                cdiByYear[futureYear] = cdiAnnualForYear;
+            }
+
+            const monthlyLcaRate = monthlyCDIForYear * lcaProf;
+            const monthlyCdbRate = monthlyCDIForYear * cdbProf;
+
             const interestLCA = currentBalanceLCA * monthlyLcaRate;
             currentBalanceLCA += interestLCA + monthlyAmount;
 
@@ -2461,6 +2613,8 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
                 balanceLCA: currentBalanceLCA,
                 interestCDB,
                 balanceCDB: currentBalanceCDB,
+                cdiRate: cdiAnnualForYear,
+                year: futureYear,
             });
         }
         
@@ -2494,8 +2648,9 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
             tableData,
             lcaProfitability: lcaProf,
             cdbProfitability: cdbProf,
+            cdiByYear,
         };
-    }, [initialDeposit, monthlyDeposit, activeMonths, lcaProfitability, cdbProfitability, cdiRate]);
+    }, [initialDeposit, monthlyDeposit, activeMonths, lcaProfitability, cdbProfitability, cdiRate, settings]);
 
     const handleCalculate = () => setResults(calculation);
 
@@ -2621,6 +2776,33 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
                                     </div>
                                 </div>
                            </div>
+                            
+                            {results.cdiByYear && (
+                                <div style={{marginTop: '20px', padding: '15px', backgroundColor: 'var(--card-bg)', borderRadius: '8px', border: '1px solid var(--border-color)'}}>
+                                    <h5 style={{margin: '0 0 10px 0', color: 'var(--primary-color)', fontSize: '0.95rem'}}>📊 Taxas CDI Aplicadas</h5>
+                                    <p style={{fontSize: '0.85rem', color: 'var(--text-secondary-color)', marginBottom: '10px'}}>
+                                        {Object.keys(results.cdiByYear).length > 1 
+                                            ? 'Simulação com projeções multi-ano do Boletim Focus do BC:'
+                                            : 'Taxa CDI aplicada nesta simulação:'}
+                                    </p>
+                                    <div style={{display: 'flex', flexWrap: 'wrap', gap: '10px'}}>
+                                        {Object.entries(results.cdiByYear).map(([year, rate]) => (
+                                            <div key={year} style={{
+                                                padding: '8px 12px',
+                                                backgroundColor: 'var(--bg-color)',
+                                                borderRadius: '6px',
+                                                fontSize: '0.85rem',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '5px'
+                                            }}>
+                                                <strong>{year}:</strong> <span style={{color: 'var(--primary-color)'}}>{(rate * 100).toFixed(2)}%</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
                             <h4 style={{marginTop: '30px', marginBottom: '10px'}}>Evolução Mensal</h4>
                             <div className="table-container">
                                 <table>
@@ -3759,6 +3941,29 @@ const SettingsMenu = () => {
                                 step="0.01"
                                 inputMode="decimal"
                             />
+                        </div>
+
+                        <div style={{marginTop: '20px', padding: '15px', backgroundColor: 'var(--bg-color)', borderRadius: '6px'}}>
+                            <h6 style={{margin: '0 0 10px 0', color: 'var(--text-secondary-color)', fontSize: '0.9rem'}}>📉 Curva de Projeção</h6>
+                            <LineChart width={280} height={150} data={[
+                                { year: new Date().getFullYear(), cdi: parseFloat(cdiAnnualInput) },
+                                { year: 2026, cdi: parseFloat(cdi2026Input) },
+                                { year: 2027, cdi: parseFloat(cdi2027Input) },
+                                { year: 2028, cdi: parseFloat(cdi2028Input) }
+                            ]} margin={{ top: 5, right: 5, left: -20, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                                <XAxis dataKey="year" stroke="var(--text-secondary-color)" style={{fontSize: '0.75rem'}} />
+                                <YAxis stroke="var(--text-secondary-color)" style={{fontSize: '0.75rem'}} domain={[8, 16]} />
+                                <RechartsTooltip 
+                                    contentStyle={{backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '4px'}}
+                                    formatter={(value) => `${value.toFixed(2)}%`}
+                                    labelFormatter={(label) => `Ano: ${label}`}
+                                />
+                                <Line type="monotone" dataKey="cdi" stroke="var(--primary-color)" strokeWidth={2} dot={{fill: 'var(--primary-color)', r: 4}} />
+                            </LineChart>
+                            <p style={{fontSize: '0.75rem', color: 'var(--text-secondary-color)', textAlign: 'center', marginTop: '8px', marginBottom: '0'}}>
+                                Taxas projetadas são aplicadas automaticamente em simulações de longo prazo
+                            </p>
                         </div>
                     </div>
 
