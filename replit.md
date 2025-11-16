@@ -69,7 +69,7 @@ npm run preview
 - Set up workflow for automatic server restart
 - Configured deployment settings
 
-### UX Improvements (Latest Session)
+### UX Improvements (Previous Session)
 - **Toast Notifications**: Replaced all browser alerts with modern toast notifications using react-hot-toast
   - Custom theming for dark/light modes
   - Success, error, and info variants
@@ -87,6 +87,43 @@ npm run preview
   - Improved button layouts with btn-group styling
   - Added icons to action buttons
   - Enhanced overall user feedback
+
+### Latest Session - Mobile Responsiveness & Feature Completion
+- **Post-Fixed Loan Calculator Simplification**: 
+  - Removed redundant "% CDI" field (previously 150%)
+  - Now calculates directly as: CDI monthly rate + fixed spread
+  - Cleaner, more intuitive interface
+  
+- **Universal PDF Export**: 
+  - Added "📄 Exportar PDF" button to ALL simulators:
+    - Investment Simulator (LCA/LCI vs CDB/RDC)
+    - Loan Calculator (PRICE & SAC)
+    - Scheduled Application Calculator
+    - Competitor Rate Finder
+    - Rural Credit Simulator
+    - Receivables Discount Simulator
+  - Each PDF includes relevant summary and detailed tables
+  - Consistent button styling with icons across all calculators
+  
+- **Graph Repositioning**: 
+  - Moved Investment Simulator graph to the end (after table data)
+  - Better UX flow: summary → table → visualization
+  
+- **Mobile Responsive Tables**: 
+  - Implemented CSS-based responsive card layout for mobile devices
+  - Tables automatically transform into cards on screens ≤600px
+  - Each table row becomes a styled card with:
+    - Clear labels for each data field
+    - Vertical layout for easy reading
+    - Proper spacing and visual hierarchy
+    - Theme-aware styling (dark/light mode)
+  - Applied to all major data tables:
+    - Investment evolution tables
+    - Loan amortization schedules
+    - Scheduled application projections
+    - Rural credit payment schedules
+  - No horizontal scrolling required on mobile
+  - Touch-friendly interface
 
 ## Notes
 - The application stores simulation history in browser localStorage
