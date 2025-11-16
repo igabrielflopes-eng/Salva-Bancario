@@ -4415,16 +4415,16 @@ const MainMenu = ({ setView }) => {
             </div>
             <div className="card-grid">
                 <FeatureCard icon="💰" title="Simular Investimento" description="Compare a rentabilidade de LCA/LCI e CDB/RDC." onClick={() => setView('investment')} />
+                <FeatureCard icon="🗓️" title="Aplicação Programada" description="Simule o acúmulo de patrimônio com aportes mensais." onClick={() => setView('scheduledApplication')} />
+                <FeatureCard icon="🧾" title="Desconto de Recebíveis" description="Simule a antecipação de boletos e cheques." onClick={() => setView('receivablesDiscount')} />
                 <FeatureCard icon="💸" title="Empréstimo Prefixado" description="Calcule empréstimos com taxas de juros fixas." onClick={() => setView('loanPre')} />
                 <FeatureCard icon="📈" title="Empréstimo Pós-fixado" description="Simule empréstimos atrelados ao CDI." onClick={() => setView('loanPost')} />
-                <FeatureCard icon="🧾" title="Desconto de Recebíveis" description="Simule a antecipação de boletos e cheques." onClick={() => setView('receivablesDiscount')} />
                 <FeatureCard icon="🚜" title="Crédito Rural" description="Simule financiamentos com carência e pagamentos anuais." onClick={() => setView('ruralCredit')} />
                 <FeatureCard icon="🏦" title="Taxa do Concorrente" description="Descubra a taxa de juros de um empréstimo." onClick={() => setView('competitorRate')} />
-                <FeatureCard icon="🗓️" title="Aplicação Programada" description="Simule o acúmulo de patrimônio com aportes mensais." onClick={() => setView('scheduledApplication')} />
-                <FeatureCard icon="🗂️" title="Histórico" description="Veja e compare suas simulações salvas." onClick={() => setView('history')} />
-                <FeatureCard icon="🔍" title="Comparador" description="Compare lado a lado duas simulações salvas." onClick={() => setView('comparison')} />
-                <FeatureCard icon="⚙️" title="Definições" description="Configure valores padrão do aplicativo." onClick={() => setView('settings')} />
                 <FeatureCard icon="🔄" title="Conversão de Taxas" description="Converta taxas e compare juros compostos vs simples." onClick={() => setView('rateConverter')} />
+                <FeatureCard icon="🔍" title="Comparador" description="Compare lado a lado duas simulações salvas." onClick={() => setView('comparison')} />
+                <FeatureCard icon="🗂️" title="Histórico" description="Veja e compare suas simulações salvas." onClick={() => setView('history')} />
+                <FeatureCard icon="⚙️" title="Definições" description="Configure valores padrão do aplicativo." onClick={() => setView('settings')} />
             </div>
         </>
     );
