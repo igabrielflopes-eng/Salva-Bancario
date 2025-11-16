@@ -1,4 +1,4 @@
-const CACHE_NAME = 'salva-bancario-v1';
+const CACHE_NAME = 'salva-bancario-v2';
 const urlsToCache = [
   '/',
   '/index.html',

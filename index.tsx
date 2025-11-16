@@ -1272,7 +1272,7 @@ const exportToPDF = (simulationType, data) => {
         console.log('[PDF Export Global] Adicionando cabeçalho...');
         doc.setFontSize(18);
         doc.setTextColor(0, 90, 156);
-        doc.text('Salva Bancário 2.0', pageWidth / 2, 20, { align: 'center' });
+        doc.text('Salva Bancário', pageWidth / 2, 20, { align: 'center' });
         
         doc.setFontSize(14);
         doc.setTextColor(0, 0, 0);
@@ -3894,7 +3894,7 @@ const MainMenu = ({ setView }) => {
     return (
         <>
             <div className="header">
-                <h1>Salva Bancário 2.0</h1>
+                <h1>Salva Bancário</h1>
                 <p>Seu canivete suíço de ferramentas financeiras.</p>
             </div>
             <div className="card-grid">
