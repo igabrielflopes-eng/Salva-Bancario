@@ -4049,35 +4049,37 @@ const SettingsMenu = () => {
                 }
             };
 
-            const [selic, cdi, ipca, incc, usd] = await Promise.all([
-                fetchIndicator(11),
-                fetchIndicator(12),
-                fetchIndicator(433),
-                fetchIndicator(192),
+            const [selicMeta, cdiMensal, ipcaAcum12m, inccAcum12m, usd] = await Promise.all([
+                fetchIndicator(432),
+                fetchIndicator(4391),
+                fetchIndicator(13522),
+                fetchIndicator(193),
                 fetchUSD()
             ]);
 
-            if (selic) setSelicAnnualInput(selic.toFixed(2));
-            if (cdi) setCdiAnnualInput(cdi.toFixed(2));
-            if (ipca) setIpcaInput(ipca.toFixed(2));
-            if (incc) setInccInput(incc.toFixed(2));
+            const cdiAnual = cdiMensal ? ((Math.pow(1 + cdiMensal / 100, 12) - 1) * 100) : null;
+
+            if (selicMeta) setSelicAnnualInput(selicMeta.toFixed(2));
+            if (cdiAnual) setCdiAnnualInput(cdiAnual.toFixed(2));
+            if (ipcaAcum12m) setIpcaInput(ipcaAcum12m.toFixed(2));
+            if (inccAcum12m) setInccInput(inccAcum12m.toFixed(2));
             if (usd) setUsdBrlInput(usd.toFixed(2));
 
             const updatedSettings = {
                 ...settings,
-                selicAnnual: selic ? selic / 100 : settings.selicAnnual,
-                cdiAnnual: cdi ? cdi / 100 : settings.cdiAnnual,
-                ipca: ipca ? ipca / 100 : settings.ipca,
-                incc: incc ? incc / 100 : settings.incc,
+                selicAnnual: selicMeta ? selicMeta / 100 : settings.selicAnnual,
+                cdiAnnual: cdiAnual ? cdiAnual / 100 : settings.cdiAnnual,
+                ipca: ipcaAcum12m ? ipcaAcum12m / 100 : settings.ipca,
+                incc: inccAcum12m ? inccAcum12m / 100 : settings.incc,
                 usdBrl: usd || settings.usdBrl,
                 indicatorsLastUpdated: new Date().toISOString()
             };
             
             updateSettings(updatedSettings);
-            toast.success('Indicadores atualizados com sucesso!');
+            toast.success('Indicadores atualizados com sucesso via BACEN!');
         } catch (error) {
             console.error('Erro ao atualizar indicadores:', error);
-            toast.error('Erro ao buscar indicadores. Mantendo valores atuais.');
+            toast.error('Erro ao buscar indicadores. Verifique sua conexão e tente novamente.');
         } finally {
             setIsLoadingIndicators(false);
         }
