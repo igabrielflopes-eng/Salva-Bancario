@@ -1035,6 +1035,78 @@ const styles = `
     .feature-card p {
       font-size: 0.8rem;
     }
+    
+    .table-container {
+      overflow-x: visible;
+    }
+    
+    .table-container table {
+      display: block;
+      width: 100%;
+    }
+    
+    .table-container thead {
+      display: none;
+    }
+    
+    .table-container tbody {
+      display: block;
+      width: 100%;
+    }
+    
+    .table-container tr {
+      display: block;
+      margin-bottom: 15px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 15px;
+      background: var(--card-bg);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    }
+    
+    .table-container td {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border: none;
+      text-align: right;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .table-container td:last-child {
+      border-bottom: none;
+    }
+    
+    .table-container td:before {
+      content: attr(data-label);
+      font-weight: 600;
+      text-align: left;
+      flex: 1;
+      color: var(--text-secondary-color);
+    }
+    
+    .receivables-list {
+      max-height: none;
+    }
+    
+    .receivable-item {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+      padding: 15px;
+    }
+    
+    .receivable-item-info {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 5px;
+    }
+    
+    .receivable-item button {
+      width: 100%;
+      margin-top: 5px;
+    }
   }
 
   .loading-spinner {
@@ -1416,6 +1488,28 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                                 </div>
                             </div>
                             
+                            <h4 style={{marginTop: '30px', marginBottom: '10px'}}>Evolução Mensal</h4>
+                            <div className="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Mês</th>
+                                            <th>Saldo (LCA/LCI)</th>
+                                            <th>Saldo (CDB/RDC)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {results.tableData.map(row => (
+                                            <tr key={row.month}>
+                                                <td data-label="Mês">{row.month}</td>
+                                                <td data-label="Saldo (LCA/LCI)">{formatCurrency(row.balanceLCA)}</td>
+                                                <td data-label="Saldo (CDB/RDC)">{formatCurrency(row.balanceCDB)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
                             <div className="chart-wrapper fade-in">
                                 <h4>📈 Gráfico de Evolução</h4>
                                 <ResponsiveContainer width="100%" height={300}>
@@ -1457,28 +1551,6 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                                         />
                                     </LineChart>
                                 </ResponsiveContainer>
-                            </div>
-                            
-                            <h4 style={{marginTop: '30px', marginBottom: '10px'}}>Evolução Mensal</h4>
-                            <div className="table-container">
-                                <table>
-                                    <thead>
-                                        <tr>
-                                            <th>Mês</th>
-                                            <th>Saldo (LCA/LCI)</th>
-                                            <th>Saldo (CDB/RDC)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {results.tableData.map(row => (
-                                            <tr key={row.month}>
-                                                <td>{row.month}</td>
-                                                <td>{formatCurrency(row.balanceLCA)}</td>
-                                                <td>{formatCurrency(row.balanceCDB)}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
                             </div>
                         </>
                     ) : (
@@ -1700,11 +1772,11 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
                                     <tbody>
                                         {results.tableData.map(row => (
                                             <tr key={row.month}>
-                                                <td>{row.month}</td>
-                                                <td>{formatCurrency(row.payment)}</td>
-                                                <td>{formatCurrency(row.principal)}</td>
-                                                <td>{formatCurrency(row.interest)}</td>
-                                                <td>{formatCurrency(row.balance)}</td>
+                                                <td data-label="Mês">{row.month}</td>
+                                                <td data-label="Parcela">{formatCurrency(row.payment)}</td>
+                                                <td data-label="Amortização">{formatCurrency(row.principal)}</td>
+                                                <td data-label="Juros">{formatCurrency(row.interest)}</td>
+                                                <td data-label="Saldo Devedor">{formatCurrency(row.balance)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -1934,9 +2006,9 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
                                     <tbody>
                                         {results.tableData.map(row => (
                                             <tr key={row.month}>
-                                                <td>{row.month}</td>
-                                                <td>{formatCurrency(row.balanceLCA)}</td>
-                                                <td>{formatCurrency(row.balanceCDB)}</td>
+                                                <td data-label="Mês">{row.month}</td>
+                                                <td data-label="Saldo (LCA/LCI)">{formatCurrency(row.balanceLCA)}</td>
+                                                <td data-label="Saldo (CDB/RDC)">{formatCurrency(row.balanceCDB)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -2314,11 +2386,11 @@ const RuralCreditSimulator = ({ onSave }) => {
                                     <tbody>
                                         {results.tableData.map(row => (
                                             <tr key={row.year}>
-                                                <td>{row.year}</td>
-                                                <td>{formatCurrency(row.payment)}</td>
-                                                <td>{formatCurrency(row.principal)}</td>
-                                                <td>{formatCurrency(row.interest)}</td>
-                                                <td>{formatCurrency(row.balance)}</td>
+                                                <td data-label="Ano">{row.year}</td>
+                                                <td data-label="Pagamento">{formatCurrency(row.payment)}</td>
+                                                <td data-label="Amortização">{formatCurrency(row.principal)}</td>
+                                                <td data-label="Juros">{formatCurrency(row.interest)}</td>
+                                                <td data-label="Saldo Devedor">{formatCurrency(row.balance)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
