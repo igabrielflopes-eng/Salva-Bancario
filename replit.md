@@ -135,6 +135,15 @@ npm run preview
   - Card "🔄 Conversão de Taxas" - calculadora de conversão e comparação de juros
   - Total de 11 ferramentas disponíveis (antes: 9)
 
+- **Bug Fixes - PDF Export (November 16, 2025)**:
+  - Corrigido erro no InterestRateConverter: `RechartsTooltip` → `ChartTooltip`
+  - Adicionado verificações de segurança robustas nas funções exportToPDF
+  - Implementado try-catch blocks com tratamento de erro amigável
+  - Adicionado console.log detalhados para debugging
+  - Verificações de existência: `if (data && data.summary && data.summary.length > 0)`
+  - Mensagens de erro com toast.error para feedback ao usuário
+  - PDF export agora funcional em todos os 11 simuladores
+
 ### Previous Session - IOF e TAC nos Empréstimos
 - **Campos IOF e TAC**:
   - Adicionado campo "IOF (%)" com valor padrão 0.38%

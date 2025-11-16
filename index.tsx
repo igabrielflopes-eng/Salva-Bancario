@@ -1267,7 +1267,7 @@ const exportToPDF = (simulationType, data) => {
         
         let yPosition = 50;
         
-        if (data.summary) {
+        if (data && data.summary && data.summary.length > 0) {
             console.log('[PDF Export Global] Adicionando resumo...');
             doc.setFontSize(12);
             doc.setTextColor(0, 90, 156);
@@ -1283,7 +1283,7 @@ const exportToPDF = (simulationType, data) => {
             yPosition += 5;
         }
         
-        if (data.table) {
+        if (data && data.table && data.table.headers && data.table.rows) {
             console.log('[PDF Export Global] Adicionando tabela...');
             autoTable(doc, {
                 startY: yPosition,
