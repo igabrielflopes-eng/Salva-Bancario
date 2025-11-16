@@ -1791,6 +1791,7 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
     
     const [initialValue, setInitialValue] = useState('R$ 10.000,00');
     const [months, setMonths] = useState('12');
+    const [selectedPeriod, setSelectedPeriod] = useState('12m');
     const [lcaProfitability, setLcaProfitability] = useState((settings.lcaPercentCDI * 100).toFixed(0));
     const [cdbProfitability, setCdbProfitability] = useState((settings.cdbPercentCDI * 100).toFixed(0));
     
@@ -1873,6 +1874,11 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
         };
     }, [initialValue, months, lcaProfitability, cdbProfitability, cdiRate, settings]);
     
+    const handlePeriodClick = (period: string, monthsValue: string) => {
+        setSelectedPeriod(period);
+        setMonths(monthsValue);
+    };
+
     const handleCalculate = () => {
         setResults(calculation);
     };
@@ -1897,7 +1903,123 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                     </div>
                     <div className="form-group">
                         <label htmlFor="months">Prazo (meses)</label>
-                        <input type="number" id="months" value={months} onChange={e => setMonths(e.target.value)} inputMode="numeric" />
+                        <input 
+                            type="number" 
+                            id="months" 
+                            value={months} 
+                            onChange={e => {
+                                setMonths(e.target.value);
+                                setSelectedPeriod('custom');
+                            }} 
+                            inputMode="numeric" 
+                        />
+                        <div style={{display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '10px'}}>
+                            <button 
+                                type="button"
+                                onClick={() => handlePeriodClick('1m', '1')}
+                                style={{
+                                    padding: '8px 12px',
+                                    border: selectedPeriod === '1m' ? '2px solid var(--primary-color)' : '1px solid var(--border-color)',
+                                    borderRadius: '6px',
+                                    backgroundColor: selectedPeriod === '1m' ? 'var(--primary-color)' : 'var(--card-bg)',
+                                    color: selectedPeriod === '1m' ? 'white' : 'var(--text-color)',
+                                    fontSize: '0.85rem',
+                                    fontWeight: selectedPeriod === '1m' ? 'bold' : 'normal',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease'
+                                }}
+                            >30 dias</button>
+                            <button 
+                                type="button"
+                                onClick={() => handlePeriodClick('2m', '2')}
+                                style={{
+                                    padding: '8px 12px',
+                                    border: selectedPeriod === '2m' ? '2px solid var(--primary-color)' : '1px solid var(--border-color)',
+                                    borderRadius: '6px',
+                                    backgroundColor: selectedPeriod === '2m' ? 'var(--primary-color)' : 'var(--card-bg)',
+                                    color: selectedPeriod === '2m' ? 'white' : 'var(--text-color)',
+                                    fontSize: '0.85rem',
+                                    fontWeight: selectedPeriod === '2m' ? 'bold' : 'normal',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease'
+                                }}
+                            >60 dias</button>
+                            <button 
+                                type="button"
+                                onClick={() => handlePeriodClick('3m', '3')}
+                                style={{
+                                    padding: '8px 12px',
+                                    border: selectedPeriod === '3m' ? '2px solid var(--primary-color)' : '1px solid var(--border-color)',
+                                    borderRadius: '6px',
+                                    backgroundColor: selectedPeriod === '3m' ? 'var(--primary-color)' : 'var(--card-bg)',
+                                    color: selectedPeriod === '3m' ? 'white' : 'var(--text-color)',
+                                    fontSize: '0.85rem',
+                                    fontWeight: selectedPeriod === '3m' ? 'bold' : 'normal',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease'
+                                }}
+                            >90 dias</button>
+                            <button 
+                                type="button"
+                                onClick={() => handlePeriodClick('6m', '6')}
+                                style={{
+                                    padding: '8px 12px',
+                                    border: selectedPeriod === '6m' ? '2px solid var(--primary-color)' : '1px solid var(--border-color)',
+                                    borderRadius: '6px',
+                                    backgroundColor: selectedPeriod === '6m' ? 'var(--primary-color)' : 'var(--card-bg)',
+                                    color: selectedPeriod === '6m' ? 'white' : 'var(--text-color)',
+                                    fontSize: '0.85rem',
+                                    fontWeight: selectedPeriod === '6m' ? 'bold' : 'normal',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease'
+                                }}
+                            >6 meses</button>
+                            <button 
+                                type="button"
+                                onClick={() => handlePeriodClick('12m', '12')}
+                                style={{
+                                    padding: '8px 12px',
+                                    border: selectedPeriod === '12m' ? '2px solid var(--primary-color)' : '1px solid var(--border-color)',
+                                    borderRadius: '6px',
+                                    backgroundColor: selectedPeriod === '12m' ? 'var(--primary-color)' : 'var(--card-bg)',
+                                    color: selectedPeriod === '12m' ? 'white' : 'var(--text-color)',
+                                    fontSize: '0.85rem',
+                                    fontWeight: selectedPeriod === '12m' ? 'bold' : 'normal',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease'
+                                }}
+                            >1 ano</button>
+                            <button 
+                                type="button"
+                                onClick={() => handlePeriodClick('24m', '24')}
+                                style={{
+                                    padding: '8px 12px',
+                                    border: selectedPeriod === '24m' ? '2px solid var(--primary-color)' : '1px solid var(--border-color)',
+                                    borderRadius: '6px',
+                                    backgroundColor: selectedPeriod === '24m' ? 'var(--primary-color)' : 'var(--card-bg)',
+                                    color: selectedPeriod === '24m' ? 'white' : 'var(--text-color)',
+                                    fontSize: '0.85rem',
+                                    fontWeight: selectedPeriod === '24m' ? 'bold' : 'normal',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease'
+                                }}
+                            >2 anos</button>
+                            <button 
+                                type="button"
+                                onClick={() => setSelectedPeriod('custom')}
+                                style={{
+                                    padding: '8px 12px',
+                                    border: selectedPeriod === 'custom' ? '2px solid var(--primary-color)' : '1px solid var(--border-color)',
+                                    borderRadius: '6px',
+                                    backgroundColor: selectedPeriod === 'custom' ? 'var(--primary-color)' : 'var(--card-bg)',
+                                    color: selectedPeriod === 'custom' ? 'white' : 'var(--text-color)',
+                                    fontSize: '0.85rem',
+                                    fontWeight: selectedPeriod === 'custom' ? 'bold' : 'normal',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease'
+                                }}
+                            >Personalizado</button>
+                        </div>
                     </div>
                      <div className="form-group">
                         <label htmlFor="lcaProfitability">
@@ -2035,7 +2157,7 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                                                 alignItems: 'center',
                                                 gap: '5px'
                                             }}>
-                                                <strong>{year}:</strong> <span style={{color: 'var(--primary-color)'}}>{(rate * 100).toFixed(2)}%</span>
+                                                <strong>{year}:</strong> <span style={{color: 'var(--primary-color)'}}>{(Number(rate) * 100).toFixed(2)}%</span>
                                             </div>
                                         ))}
                                     </div>
@@ -2127,8 +2249,8 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
     const [interestRate, setInterestRate] = useState((settings.loanRate * 100).toFixed(2));
     const [fixedSpread, setFixedSpread] = useState('0.5');
     const [system, setSystem] = useState('price');
-    const [iof, setIof] = useState((settings.iofRate * 100).toFixed(2));
     const [tac, setTac] = useState(formatCurrency(settings.tacLoan));
+    const [shouldCalculateIOF, setShouldCalculateIOF] = useState(false);
     const [financeIOF, setFinanceIOF] = useState(false);
     const [results, setResults] = useState(null);
     
@@ -2159,16 +2281,16 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
         const principal = parseCurrency(loanAmount);
         const numMonths = parseInt(months, 10);
         const monthlyRate = effectiveInterestRate;
-        const iofAdicionalRate = parseFloat(iof) / 100;
+        const iofAdicionalRate = shouldCalculateIOF ? settings.iofRate : 0;
         const iofDiarioRate = settings.iofDiarioRate || 0.000082;
         const tacValue = parseCurrency(tac);
 
         if (!principal || !numMonths || !monthlyRate || monthlyRate <= 0) return null;
 
-        const iofData = calculateIOF(principal, numMonths, iofAdicionalRate, iofDiarioRate);
+        const iofData = shouldCalculateIOF ? calculateIOF(principal, numMonths, iofAdicionalRate, iofDiarioRate) : { iofTotal: 0, iofAdicional: 0, iofDiario: 0, dias: 0, iofAdicionalRate: 0, iofDiarioRate: 0 };
         const iofValue = iofData.iofTotal;
-        const effectivePrincipal = financeIOF ? principal + iofValue : principal;
-        const totalUpfrontCosts = (financeIOF ? 0 : iofValue) + tacValue;
+        const effectivePrincipal = principal + (financeIOF ? iofValue : 0) + tacValue;
+        const totalUpfrontCosts = (shouldCalculateIOF && !financeIOF ? iofValue : 0);
 
         let tableData = [];
         let totalPaid = 0;
@@ -2262,7 +2384,7 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
                 totalInterest += interestComponent;
                 totalPaid += payment;
                 
-                const row = {
+                const row: any = {
                     month: i,
                     payment: payment,
                     principal: principalComponent,
@@ -2305,7 +2427,7 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
             tableData,
             cdiByYear: isPostFixed ? cdiByYear : null,
         };
-    }, [loanAmount, months, system, effectiveInterestRate, isPostFixed, fixedSpread, cdiRate, iof, tac, financeIOF, settings]);
+    }, [loanAmount, months, system, effectiveInterestRate, isPostFixed, fixedSpread, cdiRate, tac, shouldCalculateIOF, financeIOF, settings]);
 
     const handleCalculate = () => {
         setResults(calculation);
@@ -2373,17 +2495,35 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
                             <option value="sac">SAC (Parcelas Decrescentes)</option>
                         </select>
                     </div>
-                    <div className="form-group">
-                        <label htmlFor="iof">IOF (%)</label>
-                        <input type="number" id="iof" value={iof} onChange={e => setIof(e.target.value)} step="0.01" inputMode="decimal" />
-                    </div>
                     <div className="form-group-toggle">
-                        <input type="checkbox" id="financeIOF" checked={financeIOF} onChange={e => setFinanceIOF(e.target.checked)} />
-                        <label htmlFor="financeIOF" style={{marginBottom: 0}}>Financiar IOF (agregar ao empréstimo)</label>
+                        <input 
+                            type="checkbox" 
+                            id="shouldCalculateIOF" 
+                            checked={shouldCalculateIOF} 
+                            onChange={e => {
+                                setShouldCalculateIOF(e.target.checked);
+                                if (!e.target.checked) setFinanceIOF(false);
+                            }} 
+                        />
+                        <label htmlFor="shouldCalculateIOF" style={{marginBottom: 0}}>Calcular IOF</label>
                     </div>
+                    {shouldCalculateIOF && (
+                        <div className="form-group-toggle" style={{marginLeft: '20px'}}>
+                            <input 
+                                type="checkbox" 
+                                id="financeIOF" 
+                                checked={financeIOF} 
+                                onChange={e => setFinanceIOF(e.target.checked)} 
+                            />
+                            <label htmlFor="financeIOF" style={{marginBottom: 0}}>Financiar IOF (agregar ao empréstimo)</label>
+                        </div>
+                    )}
                     <div className="form-group">
                         <label htmlFor="tac">TAC - Taxa de Abertura de Crédito (R$)</label>
                         <input type="text" id="tac" value={tac} onChange={handleCurrencyChange(setTac)} inputMode="decimal" />
+                        <p style={{fontSize: '0.75rem', color: 'var(--text-secondary-color)', marginTop: '5px'}}>
+                            TAC sempre financiado automaticamente
+                        </p>
                     </div>
                      <button className="btn" onClick={handleCalculate}>Calcular</button>
                     <div className="keyboard-hint">Atalho: ENTER</div>
@@ -2510,7 +2650,7 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
                                                 alignItems: 'center',
                                                 gap: '5px'
                                             }}>
-                                                <strong>{year}:</strong> <span style={{color: 'var(--primary-color)'}}>{(rate * 100).toFixed(2)}%</span>
+                                                <strong>{year}:</strong> <span style={{color: 'var(--primary-color)'}}>{(Number(rate) * 100).toFixed(2)}%</span>
                                             </div>
                                         ))}
                                     </div>
@@ -2796,7 +2936,7 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
                                                 alignItems: 'center',
                                                 gap: '5px'
                                             }}>
-                                                <strong>{year}:</strong> <span style={{color: 'var(--primary-color)'}}>{(rate * 100).toFixed(2)}%</span>
+                                                <strong>{year}:</strong> <span style={{color: 'var(--primary-color)'}}>{(Number(rate) * 100).toFixed(2)}%</span>
                                             </div>
                                         ))}
                                     </div>
@@ -3954,9 +4094,9 @@ const SettingsMenu = () => {
                                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
                                 <XAxis dataKey="year" stroke="var(--text-secondary-color)" style={{fontSize: '0.75rem'}} />
                                 <YAxis stroke="var(--text-secondary-color)" style={{fontSize: '0.75rem'}} domain={[8, 16]} />
-                                <RechartsTooltip 
+                                <ChartTooltip 
                                     contentStyle={{backgroundColor: 'var(--card-bg)', border: '1px solid var(--border-color)', borderRadius: '4px'}}
-                                    formatter={(value) => `${value.toFixed(2)}%`}
+                                    formatter={(value: any) => `${value.toFixed(2)}%`}
                                     labelFormatter={(label) => `Ano: ${label}`}
                                 />
                                 <Line type="monotone" dataKey="cdi" stroke="var(--primary-color)" strokeWidth={2} dot={{fill: 'var(--primary-color)', r: 4}} />
@@ -4697,7 +4837,6 @@ const MainMenu = ({ setView }) => {
                 <FeatureCard icon="🧾" title="Desconto de Recebíveis" description="Simule a antecipação de boletos e cheques." onClick={() => setView('receivablesDiscount')} />
                 <FeatureCard icon="💸" title="Empréstimo Prefixado" description="Calcule empréstimos com taxas de juros fixas." onClick={() => setView('loanPre')} />
                 <FeatureCard icon="📈" title="Empréstimo Pós-fixado" description="Simule empréstimos atrelados ao CDI." onClick={() => setView('loanPost')} />
-                <FeatureCard icon="🚜" title="Crédito Rural" description="Simule financiamentos com carência e pagamentos anuais." onClick={() => setView('ruralCredit')} />
                 <FeatureCard icon="🏦" title="Taxa do Concorrente" description="Descubra a taxa de juros de um empréstimo." onClick={() => setView('competitorRate')} />
                 <FeatureCard icon="🔄" title="Conversão de Taxas" description="Converta taxas e compare juros compostos vs simples." onClick={() => setView('rateConverter')} />
                 <FeatureCard icon="🔍" title="Comparador" description="Compare lado a lado duas simulações salvas." onClick={() => setView('comparison')} />
@@ -4790,8 +4929,8 @@ const App = () => {
             
             if (e.key === 'Enter' && currentView !== 'main') {
                 const calculateButton = document.querySelector('button.btn:not(.btn-secondary)');
-                if (calculateButton && calculateButton.textContent.includes('Calcular')) {
-                    calculateButton.click();
+                if (calculateButton && calculateButton.textContent?.includes('Calcular')) {
+                    (calculateButton as HTMLElement).click();
                 }
             }
         };
