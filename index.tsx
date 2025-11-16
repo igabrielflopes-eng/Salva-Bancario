@@ -1586,6 +1586,9 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
     const [interestRate, setInterestRate] = useState('2.5');
     const [fixedSpread, setFixedSpread] = useState('0.5');
     const [system, setSystem] = useState('price');
+    const [iof, setIof] = useState('0.38');
+    const [tac, setTac] = useState('R$ 0,00');
+    const [financeIOF, setFinanceIOF] = useState(false);
     const [results, setResults] = useState(null);
     
     const handleMonthSelection = (value) => {
@@ -1615,13 +1618,19 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
         const principal = parseCurrency(loanAmount);
         const numMonths = parseInt(months, 10);
         const monthlyRate = effectiveInterestRate;
+        const iofRate = parseFloat(iof) / 100;
+        const tacValue = parseCurrency(tac);
 
         if (!principal || !numMonths || !monthlyRate || monthlyRate <= 0) return null;
+
+        const iofValue = principal * iofRate;
+        const effectivePrincipal = financeIOF ? principal + iofValue : principal;
+        const totalUpfrontCosts = (financeIOF ? 0 : iofValue) + tacValue;
 
         let tableData = [];
         let totalPaid = 0;
         let totalInterest = 0;
-        let remainingBalance = principal;
+        let remainingBalance = effectivePrincipal;
         let monthlyPayment;
 
         if (system === 'price') {
@@ -1630,13 +1639,13 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
             
             if (Math.abs(denominator) < 0.000001) {
                 // Handle near-zero rate case analytically (flat amortization)
-                monthlyPayment = principal / numMonths;
+                monthlyPayment = effectivePrincipal / numMonths;
             } else {
-                monthlyPayment = principal * (monthlyRate * factor) / denominator;
+                monthlyPayment = effectivePrincipal * (monthlyRate * factor) / denominator;
             }
             
             totalPaid = monthlyPayment * numMonths;
-            totalInterest = totalPaid - principal;
+            totalInterest = totalPaid - effectivePrincipal;
 
             for (let i = 1; i <= numMonths; i++) {
                 const interestComponent = remainingBalance * monthlyRate;
@@ -1651,7 +1660,7 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
                 });
             }
         } else { // SAC
-            const principalComponent = principal / numMonths;
+            const principalComponent = effectivePrincipal / numMonths;
             for (let i = 1; i <= numMonths; i++) {
                 const interestComponent = remainingBalance * monthlyRate;
                 const payment = principalComponent + interestComponent;
@@ -1665,11 +1674,16 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
                     balance: Math.abs(remainingBalance),
                 });
             }
-            totalPaid = principal + totalInterest;
+            totalPaid = effectivePrincipal + totalInterest;
         }
 
         return {
             principal,
+            effectivePrincipal,
+            iofValue,
+            tacValue,
+            financeIOF,
+            totalUpfrontCosts,
             numMonths,
             monthlyRate,
             system,
@@ -1680,9 +1694,10 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
             lastPayment: tableData[tableData.length - 1]?.payment || 0,
             totalPaid,
             totalInterest,
+            totalCost: totalPaid + totalUpfrontCosts,
             tableData,
         };
-    }, [loanAmount, months, system, effectiveInterestRate, isPostFixed, fixedSpread, cdiRate]);
+    }, [loanAmount, months, system, effectiveInterestRate, isPostFixed, fixedSpread, cdiRate, iof, tac, financeIOF]);
 
     const handleCalculate = () => {
         setResults(calculation);
@@ -1747,6 +1762,18 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
                             <option value="price">Price (Parcelas Fixas)</option>
                             <option value="sac">SAC (Parcelas Decrescentes)</option>
                         </select>
+                    </div>
+                    <div className="form-group">
+                        <label htmlFor="iof">IOF (%)</label>
+                        <input type="number" id="iof" value={iof} onChange={e => setIof(e.target.value)} step="0.01" />
+                    </div>
+                    <div className="form-group-toggle">
+                        <input type="checkbox" id="financeIOF" checked={financeIOF} onChange={e => setFinanceIOF(e.target.checked)} />
+                        <label htmlFor="financeIOF" style={{marginBottom: 0}}>Financiar IOF (agregar ao empréstimo)</label>
+                    </div>
+                    <div className="form-group">
+                        <label htmlFor="tac">TAC - Taxa de Abertura de Crédito (R$)</label>
+                        <input type="text" id="tac" value={tac} onChange={handleCurrencyChange(setTac)} />
                     </div>
                      <button className="btn" onClick={handleCalculate}>Calcular</button>
                     {results && (
