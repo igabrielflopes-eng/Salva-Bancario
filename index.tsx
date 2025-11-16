@@ -1781,13 +1781,17 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
                             <button className="btn btn-save" onClick={handleSave}>💾 Salvar</button>
                             <button className="btn btn-secondary" onClick={() => exportToPDF('Simulação de Empréstimo', {
                                 summary: [
-                                    { label: 'Valor do Empréstimo', value: formatCurrency(results.principal) },
+                                    { label: 'Valor Solicitado', value: formatCurrency(results.principal) },
+                                    { label: 'IOF', value: formatCurrency(results.iofValue) },
+                                    { label: 'TAC', value: formatCurrency(results.tacValue) },
+                                    { label: 'Financiar IOF', value: results.financeIOF ? 'Sim' : 'Não' },
+                                    { label: 'Valor Financiado', value: formatCurrency(results.effectivePrincipal) },
                                     { label: 'Prazo', value: `${results.numMonths} meses` },
                                     { label: 'Sistema', value: results.system === 'price' ? 'PRICE (Parcelas Fixas)' : 'SAC (Parcelas Decrescentes)' },
                                     { label: 'Primeira Parcela', value: formatCurrency(results.firstPayment) },
                                     { label: 'Última Parcela', value: formatCurrency(results.lastPayment) },
-                                    { label: 'Total Pago', value: formatCurrency(results.totalPaid) },
-                                    { label: 'Total de Juros', value: formatCurrency(results.totalInterest) }
+                                    { label: 'Total de Juros', value: formatCurrency(results.totalInterest) },
+                                    { label: 'Custo Total', value: formatCurrency(results.totalCost) }
                                 ],
                                 table: {
                                     headers: ['Mês', 'Parcela', 'Amortização', 'Juros', 'Saldo'],
@@ -1809,6 +1813,22 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
                         <>
                             <div className="results-summary">
                                 <div className="summary-item">
+                                    <h4>Valor Solicitado</h4>
+                                    <p>{formatCurrency(results.principal)}</p>
+                                </div>
+                                <div className="summary-item">
+                                    <h4>IOF</h4>
+                                    <p className="negative">{formatCurrency(results.iofValue)}</p>
+                                </div>
+                                <div className="summary-item">
+                                    <h4>TAC</h4>
+                                    <p className="negative">{formatCurrency(results.tacValue)}</p>
+                                </div>
+                                <div className="summary-item">
+                                    <h4>Valor Financiado</h4>
+                                    <p>{formatCurrency(results.effectivePrincipal)}</p>
+                                </div>
+                                <div className="summary-item">
                                     <h4>{system === 'price' ? 'Valor da Parcela' : 'Primeira Parcela'}</h4>
                                     <p>{formatCurrency(results.firstPayment)}</p>
                                 </div>
@@ -1819,12 +1839,12 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
                                     </div>
                                  )}
                                 <div className="summary-item">
-                                    <h4>Total Pago</h4>
-                                    <p>{formatCurrency(results.totalPaid)}</p>
-                                </div>
-                                <div className="summary-item">
                                     <h4>Total de Juros</h4>
                                     <p className="negative">{formatCurrency(results.totalInterest)}</p>
+                                </div>
+                                <div className="summary-item">
+                                    <h4>Custo Total</h4>
+                                    <p className="negative">{formatCurrency(results.totalCost)}</p>
                                 </div>
                             </div>
                              <h4 style={{marginTop: '30px', marginBottom: '10px'}}>Tabela de Amortização</h4>
