@@ -1243,6 +1243,23 @@ const getIncomeTaxRate = (days) => {
   return 0.15;
 };
 
+const calculateIOF = (principal, months, iofAdicionalRate = 0.0038, iofDiarioRate = 0.000082) => {
+  const dias = months * 30;
+  const iofAdicional = principal * iofAdicionalRate;
+  const iofDiarioCalculado = principal * iofDiarioRate * dias;
+  const iofDiario = Math.min(iofDiarioCalculado, principal * 0.03);
+  const iofTotal = iofAdicional + iofDiario;
+  
+  return {
+    iofAdicional,
+    iofDiario,
+    iofTotal,
+    dias,
+    iofAdicionalRate,
+    iofDiarioRate
+  };
+};
+
 // --- PDF EXPORT ---
 const exportToPDF = (simulationType, data) => {
     console.log('[PDF Export Global] Iniciando exportação de:', simulationType);
@@ -1339,7 +1356,8 @@ const DEFAULT_SETTINGS = {
     cdiAnnual: 0.1490, // 14.90%
     selicAnnual: 0.1500, // 15.00%
     loanRate: 0.025, // 2.5% a.m.
-    iofRate: 0.0038, // 0.38%
+    iofRate: 0.0038, // 0.38% IOF Adicional
+    iofDiarioRate: 0.000082, // 0.0082% IOF Diário
     tacLoan: 0, // R$ 0,00
     lcaPercentCDI: 0.95, // 95% do CDI
     cdbPercentCDI: 1.10, // 110% do CDI
@@ -1730,12 +1748,14 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
         const principal = parseCurrency(loanAmount);
         const numMonths = parseInt(months, 10);
         const monthlyRate = effectiveInterestRate;
-        const iofRate = parseFloat(iof) / 100;
+        const iofAdicionalRate = parseFloat(iof) / 100;
+        const iofDiarioRate = settings.iofDiarioRate || 0.000082;
         const tacValue = parseCurrency(tac);
 
         if (!principal || !numMonths || !monthlyRate || monthlyRate <= 0) return null;
 
-        const iofValue = principal * iofRate;
+        const iofData = calculateIOF(principal, numMonths, iofAdicionalRate, iofDiarioRate);
+        const iofValue = iofData.iofTotal;
         const effectivePrincipal = financeIOF ? principal + iofValue : principal;
         const totalUpfrontCosts = (financeIOF ? 0 : iofValue) + tacValue;
 
@@ -1793,6 +1813,9 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
             principal,
             effectivePrincipal,
             iofValue,
+            iofAdicional: iofData.iofAdicional,
+            iofDiario: iofData.iofDiario,
+            iofDias: iofData.dias,
             tacValue,
             financeIOF,
             totalUpfrontCosts,
@@ -1809,7 +1832,7 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
             totalCost: totalPaid + totalUpfrontCosts,
             tableData,
         };
-    }, [loanAmount, months, system, effectiveInterestRate, isPostFixed, fixedSpread, cdiRate, iof, tac, financeIOF]);
+    }, [loanAmount, months, system, effectiveInterestRate, isPostFixed, fixedSpread, cdiRate, iof, tac, financeIOF, settings.iofDiarioRate]);
 
     const handleCalculate = () => {
         setResults(calculation);
@@ -1896,7 +1919,9 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
                             <button className="btn btn-secondary" onClick={() => exportToPDF('Simulação de Empréstimo', {
                                 summary: [
                                     { label: 'Valor Solicitado', value: formatCurrency(results.principal) },
-                                    { label: 'IOF', value: formatCurrency(results.iofValue) },
+                                    { label: 'IOF Adicional (0,38%)', value: formatCurrency(results.iofAdicional) },
+                                    { label: `IOF Diário (${results.iofDias} dias)`, value: formatCurrency(results.iofDiario) },
+                                    { label: 'IOF Total', value: formatCurrency(results.iofValue) },
                                     { label: 'TAC', value: formatCurrency(results.tacValue) },
                                     { label: 'Financiar IOF', value: results.financeIOF ? 'Sim' : 'Não' },
                                     { label: 'Valor Financiado', value: formatCurrency(results.effectivePrincipal) },
@@ -2365,7 +2390,7 @@ const RuralCreditSimulator = ({ onSave }) => {
     const [graceYears, setGraceYears] = useState('2');
     const [noGracePeriod, setNoGracePeriod] = useState(false);
     const [graceInterest, setGraceInterest] = useState('accumulate');
-    const [system, setSystem] = useState('price');
+    const [system, setSystem] = useState('sac');
     const [results, setResults] = useState(null);
     const [error, setError] = useState('');
 
@@ -3208,6 +3233,7 @@ const SettingsMenu = () => {
     const [selicAnnualInput, setSelicAnnualInput] = useState((settings.selicAnnual * 100).toFixed(2));
     const [loanRateInput, setLoanRateInput] = useState((settings.loanRate * 100).toFixed(2));
     const [iofRateInput, setIofRateInput] = useState((settings.iofRate * 100).toFixed(2));
+    const [iofDiarioRateInput, setIofDiarioRateInput] = useState(((settings.iofDiarioRate || 0.000082) * 100).toFixed(4));
     const [tacLoanInput, setTacLoanInput] = useState(formatCurrency(settings.tacLoan));
     const [lcaPercentInput, setLcaPercentInput] = useState((settings.lcaPercentCDI * 100).toFixed(0));
     const [cdbPercentInput, setCdbPercentInput] = useState((settings.cdbPercentCDI * 100).toFixed(0));
@@ -3224,6 +3250,7 @@ const SettingsMenu = () => {
             selicAnnual: parseFloat(selicAnnualInput) / 100,
             loanRate: parseFloat(loanRateInput) / 100,
             iofRate: parseFloat(iofRateInput) / 100,
+            iofDiarioRate: parseFloat(iofDiarioRateInput) / 100,
             tacLoan: parseCurrency(tacLoanInput),
             lcaPercentCDI: parseFloat(lcaPercentInput) / 100,
             cdbPercentCDI: parseFloat(cdbPercentInput) / 100,
@@ -3240,6 +3267,7 @@ const SettingsMenu = () => {
             setSelicAnnualInput((DEFAULT_SETTINGS.selicAnnual * 100).toFixed(2));
             setLoanRateInput((DEFAULT_SETTINGS.loanRate * 100).toFixed(2));
             setIofRateInput((DEFAULT_SETTINGS.iofRate * 100).toFixed(2));
+            setIofDiarioRateInput((DEFAULT_SETTINGS.iofDiarioRate * 100).toFixed(4));
             setTacLoanInput(formatCurrency(DEFAULT_SETTINGS.tacLoan));
             setLcaPercentInput((DEFAULT_SETTINGS.lcaPercentCDI * 100).toFixed(0));
             setCdbPercentInput((DEFAULT_SETTINGS.cdbPercentCDI * 100).toFixed(0));
@@ -3314,8 +3342,8 @@ const SettingsMenu = () => {
 
                     <div className="form-group">
                         <label>
-                            IOF Padrão (%)
-                            <Tooltip text="Imposto sobre Operações Financeiras. Taxa típica: 0,38%.">
+                            IOF Adicional Padrão (%)
+                            <Tooltip text="IOF Adicional sobre operações de crédito. Taxa fixa: 0,38%.">
                                 <span className="tooltip-icon">?</span>
                             </Tooltip>
                         </label>
@@ -3324,6 +3352,22 @@ const SettingsMenu = () => {
                             value={iofRateInput} 
                             onChange={e => setIofRateInput(e.target.value)}
                             step="0.01"
+                            inputMode="decimal"
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label>
+                            IOF Diário Padrão (%)
+                            <Tooltip text="IOF Diário sobre operações de crédito. Taxa típica: 0,0082% por dia (máximo 3%).">
+                                <span className="tooltip-icon">?</span>
+                            </Tooltip>
+                        </label>
+                        <input 
+                            type="number" 
+                            value={iofDiarioRateInput} 
+                            onChange={e => setIofDiarioRateInput(e.target.value)}
+                            step="0.0001"
                             inputMode="decimal"
                         />
                     </div>
