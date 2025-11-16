@@ -1691,7 +1691,6 @@ const DEFAULT_SETTINGS = {
     cdi2028: 0.1000, // 10.00% - Projeção Boletim Focus
     selicAnnual: 0.1500, // 15.00%
     ipca: 0.0482, // 4.82% a.a.
-    incc: 0.0395, // 3.95% a.a.
     usdBrl: 5.85, // R$ 5,85
     loanRate: 0.025, // 2.5% a.m.
     iofRate: 0.0038, // 0.38% IOF Adicional
@@ -3960,7 +3959,6 @@ const SettingsMenu = () => {
     const [cdi2028Input, setCdi2028Input] = useState(((settings.cdi2028 || DEFAULT_SETTINGS.cdi2028) * 100).toFixed(2));
     const [selicAnnualInput, setSelicAnnualInput] = useState((settings.selicAnnual * 100).toFixed(2));
     const [ipcaInput, setIpcaInput] = useState(((settings.ipca || DEFAULT_SETTINGS.ipca) * 100).toFixed(2));
-    const [inccInput, setInccInput] = useState(((settings.incc || DEFAULT_SETTINGS.incc) * 100).toFixed(2));
     const [usdBrlInput, setUsdBrlInput] = useState((settings.usdBrl || DEFAULT_SETTINGS.usdBrl).toFixed(2));
     const [loanRateInput, setLoanRateInput] = useState((settings.loanRate * 100).toFixed(2));
     const [iofRateInput, setIofRateInput] = useState((settings.iofRate * 100).toFixed(2));
@@ -3986,7 +3984,6 @@ const SettingsMenu = () => {
             cdi2028: parseFloat(cdi2028Input) / 100,
             selicAnnual: parseFloat(selicAnnualInput) / 100,
             ipca: parseFloat(ipcaInput) / 100,
-            incc: parseFloat(inccInput) / 100,
             usdBrl: parseFloat(usdBrlInput),
             loanRate: parseFloat(loanRateInput) / 100,
             iofRate: parseFloat(iofRateInput) / 100,
@@ -4012,7 +4009,6 @@ const SettingsMenu = () => {
             setCdi2028Input((DEFAULT_SETTINGS.cdi2028 * 100).toFixed(2));
             setSelicAnnualInput((DEFAULT_SETTINGS.selicAnnual * 100).toFixed(2));
             setIpcaInput((DEFAULT_SETTINGS.ipca * 100).toFixed(2));
-            setInccInput((DEFAULT_SETTINGS.incc * 100).toFixed(2));
             setUsdBrlInput(DEFAULT_SETTINGS.usdBrl.toFixed(2));
             setLoanRateInput((DEFAULT_SETTINGS.loanRate * 100).toFixed(2));
             setIofRateInput((DEFAULT_SETTINGS.iofRate * 100).toFixed(2));
@@ -4049,34 +4045,26 @@ const SettingsMenu = () => {
                 }
             };
 
-            const [selicMeta, cdiMensal, ipcaAcum12m, inccAcum12m, usd] = await Promise.all([
+            const [selicMeta, ipcaAcum12m, usd] = await Promise.all([
                 fetchIndicator(432),
-                fetchIndicator(4391),
                 fetchIndicator(13522),
-                fetchIndicator(193),
                 fetchUSD()
             ]);
 
-            const cdiAnual = cdiMensal ? ((Math.pow(1 + cdiMensal / 100, 12) - 1) * 100) : null;
-
             if (selicMeta) setSelicAnnualInput(selicMeta.toFixed(2));
-            if (cdiAnual) setCdiAnnualInput(cdiAnual.toFixed(2));
             if (ipcaAcum12m) setIpcaInput(ipcaAcum12m.toFixed(2));
-            if (inccAcum12m) setInccInput(inccAcum12m.toFixed(2));
             if (usd) setUsdBrlInput(usd.toFixed(2));
 
             const updatedSettings = {
                 ...settings,
                 selicAnnual: selicMeta ? selicMeta / 100 : settings.selicAnnual,
-                cdiAnnual: cdiAnual ? cdiAnual / 100 : settings.cdiAnnual,
                 ipca: ipcaAcum12m ? ipcaAcum12m / 100 : settings.ipca,
-                incc: inccAcum12m ? inccAcum12m / 100 : settings.incc,
                 usdBrl: usd || settings.usdBrl,
                 indicatorsLastUpdated: new Date().toISOString()
             };
             
             updateSettings(updatedSettings);
-            toast.success('Indicadores atualizados com sucesso via BACEN!');
+            toast.success('Indicadores atualizados: SELIC, IPCA e Dólar!');
         } catch (error) {
             console.error('Erro ao atualizar indicadores:', error);
             toast.error('Erro ao buscar indicadores. Verifique sua conexão e tente novamente.');
@@ -4228,22 +4216,6 @@ const SettingsMenu = () => {
                             type="number" 
                             value={ipcaInput} 
                             onChange={e => setIpcaInput(e.target.value)}
-                            step="0.01"
-                            inputMode="decimal"
-                        />
-                    </div>
-
-                    <div className="form-group">
-                        <label>
-                            INCC (%)
-                            <Tooltip text="Índice Nacional de Custo da Construção - Mede a variação de custos na construção civil.">
-                                <span className="tooltip-icon">?</span>
-                            </Tooltip>
-                        </label>
-                        <input 
-                            type="number" 
-                            value={inccInput} 
-                            onChange={e => setInccInput(e.target.value)}
                             step="0.01"
                             inputMode="decimal"
                         />
@@ -4872,14 +4844,6 @@ const EconomicIndicators = ({ setView }) => {
                             <p style={{fontSize: '0.75rem', color: 'var(--text-secondary-color)', margin: '5px 0 0 0'}}>Índice de Preços ao Consumidor</p>
                         </div>
 
-                        <div style={{padding: '15px', backgroundColor: 'var(--card-bg)', borderRadius: '8px', border: '2px solid #8b5cf6'}}>
-                            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                                <span style={{fontSize: '1rem', fontWeight: 'bold', color: '#8b5cf6'}}>INCC</span>
-                                <span style={{fontSize: '1.3rem', fontWeight: 'bold'}}>{((settings.incc || DEFAULT_SETTINGS.incc) * 100).toFixed(2)}%</span>
-                            </div>
-                            <p style={{fontSize: '0.75rem', color: 'var(--text-secondary-color)', margin: '5px 0 0 0'}}>Índice de Custo da Construção</p>
-                        </div>
-
                         <div style={{padding: '15px', backgroundColor: 'var(--card-bg)', borderRadius: '8px', border: '2px solid #10b981'}}>
                             <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                                 <span style={{fontSize: '1rem', fontWeight: 'bold', color: '#10b981'}}>Dólar</span>
@@ -4913,7 +4877,7 @@ const MainMenu = ({ setView }) => {
                 <p>Seu canivete suíço de ferramentas financeiras.</p>
             </div>
             <div className="card-grid">
-                <FeatureCard icon="📊" title="Indicadores Econômicos" description="Visualize CDI, SELIC, IPCA, INCC e Dólar." onClick={() => setView('indicators')} />
+                <FeatureCard icon="📊" title="Indicadores Econômicos" description="Visualize CDI, SELIC, IPCA e Dólar." onClick={() => setView('indicators')} />
                 <FeatureCard icon="💰" title="Simular Investimento" description="Compare a rentabilidade de LCA/LCI e CDB/RDC." onClick={() => setView('investment')} />
                 <FeatureCard icon="🗓️" title="Aplicação Programada" description="Simule o acúmulo de patrimônio com aportes mensais." onClick={() => setView('scheduledApplication')} />
                 <FeatureCard icon="🧾" title="Desconto de Recebíveis" description="Simule a antecipação de boletos e cheques." onClick={() => setView('receivablesDiscount')} />
