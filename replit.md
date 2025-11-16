@@ -88,7 +88,15 @@ npm run preview
   - Added icons to action buttons
   - Enhanced overall user feedback
 
-### Latest Session - Mobile Responsiveness & Feature Completion
+### Current Session - Taxa Final Líquida
+- **Taxa de Retorno em Percentual**:
+  - Adicionado campo "Taxa Final Líquida" no Simulador de Investimento
+  - Exibe o retorno percentual líquido para LCA/LCI e CDB/RDC
+  - Facilita comparação direta entre as duas modalidades
+  - Fórmula: (Rendimento Líquido / Valor Inicial) × 100
+  - Incluído também no export PDF
+
+### Previous Session - Mobile Responsiveness & Feature Completion
 - **Post-Fixed Loan Calculator Simplification**: 
   - Removed redundant "% CDI" field (previously 150%)
   - Now calculates directly as: CDI monthly rate + fixed spread
