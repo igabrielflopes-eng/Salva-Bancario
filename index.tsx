@@ -1634,7 +1634,32 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
                         </select>
                     </div>
                      <button className="btn" onClick={handleCalculate}>Calcular</button>
-                    {results && <button className="btn btn-save" onClick={handleSave}>Salvar Simulação</button>}
+                    {results && (
+                        <div className="btn-group">
+                            <button className="btn btn-save" onClick={handleSave}>💾 Salvar</button>
+                            <button className="btn btn-secondary" onClick={() => exportToPDF('Simulação de Empréstimo', {
+                                summary: [
+                                    { label: 'Valor do Empréstimo', value: formatCurrency(results.principal) },
+                                    { label: 'Prazo', value: `${results.numMonths} meses` },
+                                    { label: 'Sistema', value: results.system === 'price' ? 'PRICE (Parcelas Fixas)' : 'SAC (Parcelas Decrescentes)' },
+                                    { label: 'Primeira Parcela', value: formatCurrency(results.firstPayment) },
+                                    { label: 'Última Parcela', value: formatCurrency(results.lastPayment) },
+                                    { label: 'Total Pago', value: formatCurrency(results.totalPaid) },
+                                    { label: 'Total de Juros', value: formatCurrency(results.totalInterest) }
+                                ],
+                                table: {
+                                    headers: ['Mês', 'Parcela', 'Amortização', 'Juros', 'Saldo'],
+                                    rows: results.tableData.map(row => [
+                                        row.month,
+                                        formatCurrency(row.payment),
+                                        formatCurrency(row.principal),
+                                        formatCurrency(row.interest),
+                                        formatCurrency(row.balance)
+                                    ])
+                                }
+                            })}>📄 Exportar PDF</button>
+                        </div>
+                    )}
                 </div>
                  <div className="results-section">
                     <h3>Resultados da Simulação</h3>
@@ -1830,7 +1855,31 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
                      <p className="form-note">Observação: Aplicações em LCA/LCI podem ter carência (ex: 6 meses). Cada novo aporte pode estar sujeito a uma nova carência.</p>
                      <p style={{fontSize: '0.8rem', color: 'var(--text-secondary-color)', textAlign: 'center', marginBottom: '15px'}}>CDI base: {formatPercentage(cdiRate)} a.m.</p>
                     <button className="btn" onClick={handleCalculate} disabled={!activeMonths || parseInt(activeMonths) <= 0}>Calcular</button>
-                    {results && <button className="btn btn-save" onClick={handleSave}>Salvar Simulação</button>}
+                    {results && (
+                        <div className="btn-group">
+                            <button className="btn btn-save" onClick={handleSave}>💾 Salvar</button>
+                            <button className="btn btn-secondary" onClick={() => exportToPDF('Aplicação Programada', {
+                                summary: [
+                                    { label: 'Aporte Inicial', value: formatCurrency(results.initialAmount) },
+                                    { label: 'Aportes Mensais', value: formatCurrency(results.monthlyAmount) },
+                                    { label: 'Prazo', value: `${results.numMonths} meses` },
+                                    { label: 'Total Investido', value: formatCurrency(results.totalInvested) },
+                                    { label: 'LCA/LCI - Valor Final', value: formatCurrency(results.finalValueLCA) },
+                                    { label: 'LCA/LCI - Rendimento', value: formatCurrency(results.totalProfitLCA) },
+                                    { label: 'CDB/RDC - Valor Final Líquido', value: formatCurrency(results.finalValueCDBNet) },
+                                    { label: 'CDB/RDC - Rendimento Líquido', value: formatCurrency(results.totalProfitCDBNet) }
+                                ],
+                                table: {
+                                    headers: ['Mês', 'Saldo LCA/LCI', 'Saldo CDB/RDC'],
+                                    rows: results.tableData.map(row => [
+                                        row.month,
+                                        formatCurrency(row.balanceLCA),
+                                        formatCurrency(row.balanceCDB)
+                                    ])
+                                }
+                            })}>📄 Exportar PDF</button>
+                        </div>
+                    )}
                 </div>
                 <div className="results-section">
                     <h3>Resultados da Simulação</h3>
@@ -1997,7 +2046,20 @@ const CompetitorRateFinder = ({ onSave }) => {
                     </div>
                      {error && <p style={{ color: 'var(--danger-color)', textAlign: 'center', marginBottom: '15px' }}>{error}</p>}
                      <button className="btn" onClick={handleCalculate}>Calcular Taxa</button>
-                    {results && <button className="btn btn-save" onClick={handleSave}>Salvar Apuração</button>}
+                    {results && (
+                        <div className="btn-group">
+                            <button className="btn btn-save" onClick={handleSave}>💾 Salvar</button>
+                            <button className="btn btn-secondary" onClick={() => exportToPDF('Taxa do Concorrente', {
+                                summary: [
+                                    { label: 'Valor do Empréstimo', value: formatCurrency(results.loanAmount) },
+                                    { label: 'Valor da Parcela', value: formatCurrency(results.monthlyPayment) },
+                                    { label: 'Quantidade de Meses', value: `${results.months} meses` },
+                                    { label: 'Taxa Mensal Calculada', value: formatPercentage(results.calculatedRate) },
+                                    { label: 'Taxa Anual Equivalente', value: formatPercentage(Math.pow(1 + results.calculatedRate, 12) - 1) }
+                                ]
+                            })}>📄 Exportar PDF</button>
+                        </div>
+                    )}
                 </div>
                  <div className="results-section">
                     <h3>Resultado da Apuração</h3>
@@ -2186,7 +2248,34 @@ const RuralCreditSimulator = ({ onSave }) => {
                     )}
                     {error && <p style={{ color: 'var(--danger-color)', textAlign: 'center', marginBottom: '15px' }}>{error}</p>}
                     <button className="btn" onClick={handleCalculate} disabled={!!error}>Calcular</button>
-                    {results && <button className="btn btn-save" onClick={handleSave}>Salvar Simulação</button>}
+                    {results && (
+                        <div className="btn-group">
+                            <button className="btn btn-save" onClick={handleSave}>💾 Salvar</button>
+                            <button className="btn btn-secondary" onClick={() => exportToPDF('Crédito Rural', {
+                                summary: [
+                                    { label: 'Valor do Financiamento', value: formatCurrency(results.principal) },
+                                    { label: 'Taxa de Juros Anual', value: formatPercentage(results.annualRate) },
+                                    { label: 'Prazo Total', value: `${results.totalYears} anos` },
+                                    { label: 'Anos de Carência', value: `${results.graceYears} anos` },
+                                    { label: 'Saldo Pós-Carência', value: formatCurrency(results.principalAfterGrace) },
+                                    { label: 'Parcela Anual', value: formatCurrency(results.annualPayment) },
+                                    { label: 'Total de Juros', value: formatCurrency(results.totalInterest) },
+                                    { label: 'Total Pago', value: formatCurrency(results.totalPaid) }
+                                ],
+                                table: {
+                                    headers: ['Ano', 'Tipo', 'Pagamento', 'Amortização', 'Juros', 'Saldo'],
+                                    rows: results.tableData.map(row => [
+                                        row.year,
+                                        row.isGrace ? 'Carência' : 'Amortização',
+                                        formatCurrency(row.payment),
+                                        formatCurrency(row.principal),
+                                        formatCurrency(row.interest),
+                                        formatCurrency(row.balance)
+                                    ])
+                                }
+                            })}>📄 Exportar PDF</button>
+                        </div>
+                    )}
                 </div>
                  <div className="results-section">
                     <h3>Resultados da Simulação</h3>
@@ -2413,7 +2502,31 @@ const ReceivablesDiscountSimulator = ({ onSave }) => {
                     </div>
                     {error && <p style={{ color: 'var(--danger-color)', textAlign: 'center', marginBottom: '15px' }}>{error}</p>}
                     <button className="btn" onClick={handleCalculate} disabled={receivables.length === 0}>Calcular</button>
-                    {results && <button className="btn btn-save" onClick={handleSave}>Salvar Simulação</button>}
+                    {results && (
+                        <div className="btn-group">
+                            <button className="btn btn-save" onClick={handleSave}>💾 Salvar</button>
+                            <button className="btn btn-secondary" onClick={() => exportToPDF('Desconto de Recebíveis', {
+                                summary: [
+                                    { label: 'Valor Líquido a Receber', value: formatCurrency(results.netValue) },
+                                    { label: 'Valor Bruto dos Títulos', value: formatCurrency(results.totalGrossValue) },
+                                    { label: 'Custo Total da Operação', value: formatCurrency(results.totalDiscounts) },
+                                    { label: 'Taxa de Juros', value: formatPercentage(results.monthlyRate) },
+                                    { label: 'TAC', value: formatCurrency(results.tac) }
+                                ],
+                                table: {
+                                    headers: ['Título', 'Valor Bruto', 'Dias', 'Juros', 'IOF', 'Valor Líquido'],
+                                    rows: results.receivablesDetails.map((r, idx) => [
+                                        `Título ${idx + 1}`,
+                                        formatCurrency(r.grossValue),
+                                        r.days,
+                                        formatCurrency(r.interest),
+                                        formatCurrency(r.iof),
+                                        formatCurrency(r.netValue)
+                                    ])
+                                }
+                            })}>📄 Exportar PDF</button>
+                        </div>
+                    )}
                 </div>
                  <div className="results-section">
                     <h3>Resultados da Simulação</h3>
