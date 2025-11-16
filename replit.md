@@ -88,7 +88,54 @@ npm run preview
   - Added icons to action buttons
   - Enhanced overall user feedback
 
-### Current Session - IOF e TAC nos Empréstimos
+### Current Session - Global Settings & Rate Converter (November 16, 2025)
+
+- **Sistema de Configurações Globais (Settings Menu)**:
+  - Criado hook `useSettings()` para gerenciamento de configurações persistentes no localStorage
+  - Funções auxiliares para conversão de taxas: `monthlyToAnnual()` e `annualToMonthly()`
+  - Componente `SettingsMenu` completo com campos organizados em categorias:
+    - **Taxas de Mercado**: CDI Anual, SELIC Anual (com exibição automática mensal/anual)
+    - **Empréstimos**: Taxa padrão mensal, IOF padrão, TAC padrão
+    - **Investimentos**: % CDI para LCA/LCI, % CDI para CDB/RDC
+    - **Desconto de Recebíveis**: Taxa TD padrão mensal, TAC TD padrão
+  - Botões "Salvar Configurações" e "Restaurar Padrões"
+  - Exibe timestamp da última atualização
+  - Tooltips explicativos em todos os campos
+  - Integração automática: valores padrão são aplicados a todos os simuladores
+
+- **Conversor de Taxas de Juros (Interest Rate Converter)**:
+  - Conversão entre períodos: dia, mês, ano
+  - Exibição de taxas equivalentes (diária, mensal, anual)
+  - Comparação completa: Juros Compostos vs Juros Simples
+  - Inputs: taxa, períodos (origem/destino), principal, prazo
+  - Resultados detalhados com gráfico de evolução
+  - Tabela comparativa de evolução mês a mês
+  - Toggle "Mostrar/Ocultar Fórmulas" com explicações matemáticas
+  - Export PDF completo com summary e tabela
+  - Gráfico interativo (Recharts) mostrando diferença entre juros compostos e simples
+
+- **Formato Duplo do CDI em Todo o Aplicativo**:
+  - Criada função `formatCDI(monthlyRate, annualRate)` 
+  - Formato: "X,XX% a.m. (Y,YY% a.a.)"
+  - Aplicado em:
+    - Simulador de Investimento
+    - Calculadoras de Empréstimo (Prefixado e Pós-fixado)
+    - Aplicação Programada
+  - Exibe tanto taxa mensal quanto anual simultaneamente
+
+- **Integração de Valores Padrão das Settings**:
+  - `InvestmentSimulator`: usa `lcaPercentCDI` e `cdbPercentCDI` das settings
+  - `LoanSimulator`: usa `loanRate`, `iofRate`, `tacLoan` das settings
+  - `ReceivablesDiscountSimulator`: usa `tdRate`, `tacTD` das settings
+  - Usuários podem alterar valores padrão globalmente via Settings
+  - Valores persistem entre sessões (localStorage)
+
+- **Novas Features no Menu Principal**:
+  - Card "⚙️ Definições" - acesso ao menu de configurações
+  - Card "🔄 Conversão de Taxas" - calculadora de conversão e comparação de juros
+  - Total de 11 ferramentas disponíveis (antes: 9)
+
+### Previous Session - IOF e TAC nos Empréstimos
 - **Campos IOF e TAC**:
   - Adicionado campo "IOF (%)" com valor padrão 0.38%
   - Adicionado checkbox "Financiar IOF" que agrega o valor do IOF ao empréstimo
@@ -182,4 +229,5 @@ npm run preview
 - The application stores simulation history in browser localStorage
 - Theme preference is also persisted in localStorage
 - CDI rate is fetched dynamically (used in various calculations)
-- All components are currently in a single file (index.tsx) - approximately 3,284 lines
+- Global settings stored in localStorage with automatic application to all simulators
+- All components are currently in a single file (index.tsx) - approximately 3,976 lines
