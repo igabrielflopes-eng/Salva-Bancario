@@ -18,7 +18,7 @@ I prefer iterative development, with clear communication before major changes ar
 - **PDF Export**: jsPDF with jspdf-autotable (for reports)
 
 ### Core Features
-- **Economic Indicators Dashboard**: Real-time view of 5 key Brazilian economic indicators (CDI, SELIC, IPCA, INCC, Dólar/Real) with optional automatic updates via Banco Central API.
+- **Economic Indicators Dashboard**: Real-time view of 4 key Brazilian economic indicators (CDI, SELIC, IPCA, Dólar/Real) with limited automatic updates via Banco Central API (SELIC, IPCA, Dólar only).
 - **Investment Simulator**: Compare LCA/LCI vs. CDB/RDC with multi-year CDI projections and quick-period buttons (30d, 60d, 90d, 6m, 1a, 2a, custom).
 - **Loan Calculators**: Prefixado (fixed-rate) and Pós-fixado (CDI-linked with multi-year projections), with simplified IOF calculation (checkbox-based) and automatic TAC financing.
 - **Scheduled Application Calculator**: Simulate wealth accumulation with dynamic CDI projections for long-term planning.
@@ -27,7 +27,7 @@ I prefer iterative development, with clear communication before major changes ar
 - **History & Comparison Tools**: Save and compare simulations.
 - **Dark/Light Theme Toggle**: User-controlled theme.
 - **Interest Rate Converter**: Convert between periods and compare compound vs. simple interest.
-- **Global Settings Menu**: Configure default values for all calculators (e.g., CDI, SELIC, IPCA, INCC, Dólar, loan rates) including multi-year CDI projections based on Boletim Focus do BC (2026: 12.25%, 2027: 10.50%, 2028: 10%), persisted via `localStorage`.
+- **Global Settings Menu**: Configure default values for all calculators (e.g., CDI, SELIC, IPCA, Dólar, loan rates) including multi-year CDI projections based on Boletim Focus do BC (2026: 12.25%, 2027: 10.50%, 2028: 10%), persisted via `localStorage`.
 - **Progressive Web App (PWA)**: Installable, offline-first application with custom icons and a branded theme.
 - **Universal PDF Export**: Generate professional PDF reports for all simulators, optimized for Replit/iframe environments.
 - **Mobile Responsiveness**: Tables transform into responsive card layouts on small screens; graphs reposition for better UX flow.
@@ -46,29 +46,31 @@ The application functions as a PWA, featuring:
 
 ## External Dependencies
 - **Google Gemini API**: `GEMINI_API_KEY` (for AI features, though not explicitly detailed in functionality).
-- **Banco Central do Brasil API (BACEN)**: Optional integration for automatic updates of economic indicators (CDI, SELIC, IPCA, INCC). No API key required. Endpoints: https://api.bcb.gov.br/dados/serie/bcdata.sgs/{code}/dados
+- **Banco Central do Brasil API (BACEN)**: Limited optional integration for automatic updates of SELIC and IPCA only. No API key required. Endpoints: https://api.bcb.gov.br/dados/serie/bcdata.sgs/{code}/dados
 - **AwesomeAPI**: Optional integration for USD/BRL exchange rate updates. Endpoint: https://economia.awesomeapi.com.br/last/USD-BRL
 - **Recharts**: For interactive data visualization.
 - **React Hot Toast**: For modern toast notifications.
 - **jsPDF** and **jspdf-autotable**: For generating PDF reports.
 
 ## BACEN API Integration
-The application uses the following SGS (Sistema Gerenciador de Séries Temporais) series codes from Banco Central do Brasil to fetch economic indicators:
+The application uses a limited BACEN integration via the "Atualizar via BACEN" button in Settings, which automatically updates only 3 indicators:
 - **SELIC Meta**: Código 432 (Taxa Meta Selic % a.a.) → Returns annual rate directly
-- **CDI Anual**: Código 4391 (CDI acumulado no mês %) → Monthly rate annualized via formula: `((1 + taxa_mensal/100)^12 - 1) * 100`
 - **IPCA**: Código 13522 (IPCA acumulado 12 meses %) → Returns 12-month accumulated inflation
-- **INCC-DI**: Código 193 (INCC-DI acumulado 12 meses %) → Returns 12-month accumulated construction index
 - **USD/BRL**: AwesomeAPI (https://economia.awesomeapi.com.br/last/USD-BRL) → Real-time exchange rate
 
-**Expected values (November 2025):** SELIC ~15% a.a., CDI ~14.90% a.a., IPCA ~4.68%, INCC ~6.40%, USD/BRL ~5.80
+**CDI is manual-input only** - not updated via API to maintain offline-first philosophy and prevent API dependency.
+
+**Expected values (November 2025):** SELIC ~15% a.a., CDI ~14.90% a.a., IPCA ~4.68%, USD/BRL ~5.80
 
 ## Recent Changes (November 16, 2025)
-- Added **Economic Indicators Dashboard** featuring 5 key Brazilian indicators: CDI, SELIC, IPCA, INCC, and Dólar/Real
-- Implemented hybrid approach for indicators: manual editing (offline-first) with optional automatic updates via BACEN API
+- Added **Economic Indicators Dashboard** featuring 4 key Brazilian indicators: CDI, SELIC, IPCA, and Dólar/Real
+- Implemented hybrid approach for indicators: manual editing (offline-first) with limited automatic updates via BACEN API
 - Added "Atualizar via BACEN" button in Settings to fetch latest indicator values from official sources
-- Extended DEFAULT_SETTINGS to include `ipca`, `incc`, `usdBrl`, and `indicatorsLastUpdated` fields
+- Extended DEFAULT_SETTINGS to include `ipca` and `usdBrl` fields
 - Created dedicated EconomicIndicators component with color-coded indicator cards
 - Positioned "Indicadores Econômicos" card as first item in main menu for easy access
 - Maintained offline-first architecture while allowing opt-in API usage for real-time data
-- **Fixed BACEN API codes**: Corrected series codes to fetch annual/accumulated values instead of monthly variations (SELIC 432, CDI 4391→annualized, IPCA 13522, INCC 193)
+- **Fixed BACEN API codes**: Corrected series codes to fetch annual/accumulated values instead of monthly variations (SELIC 432, IPCA 13522)
 - **Simplified Interest Rate Converter**: Removed monetary calculations, now focuses exclusively on rate capitalization/decapitalization between periods
+- **Removed INCC indicator**: Completely removed INCC (construction cost index) from the application to simplify indicator dashboard
+- **Limited BACEN API Integration**: "Atualizar via BACEN" now updates only SELIC, IPCA, and Dólar. CDI is manual-input only to maintain offline-first philosophy and reduce API dependency
