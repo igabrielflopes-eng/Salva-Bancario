@@ -1296,9 +1296,28 @@ const exportToPDF = (simulationType, data) => {
         }
         
         console.log('[PDF Export Global] Salvando arquivo...');
-        doc.save(`${simulationType.replace(/ /g, '_')}_${Date.now()}.pdf`);
+        
+        // Solução para iframe/Replit: usar blob + window.open
+        const blob = doc.output('blob');
+        const url = URL.createObjectURL(blob);
+        const newWindow = window.open(url, '_blank');
+        
+        // Fallback se popup blocker ativar
+        if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+            console.log('[PDF Export Global] Popup bloqueado, usando link de download...');
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${simulationType.replace(/ /g, '_')}_${Date.now()}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        // Liberar memória após um pequeno delay (tanto para sucesso quanto fallback)
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        
         console.log('[PDF Export Global] PDF exportado com sucesso!');
-        toast.success('PDF exportado com sucesso!');
+        toast.success('PDF aberto em nova aba! Use Ctrl+S ou o botão de download do navegador.');
     } catch (error) {
         console.error('[PDF Export Global] Erro ao exportar PDF:', error);
         toast.error('Erro ao exportar PDF: ' + error.message);
@@ -3552,9 +3571,28 @@ const InterestRateConverter = () => {
             }
 
             console.log('[PDF Export] Salvando arquivo...');
-            doc.save(`Conversao_Taxas_${Date.now()}.pdf`);
+            
+            // Solução para iframe/Replit: usar blob + window.open
+            const blob = doc.output('blob');
+            const url = URL.createObjectURL(blob);
+            const newWindow = window.open(url, '_blank');
+            
+            // Fallback se popup blocker ativar
+            if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+                console.log('[PDF Export] Popup bloqueado, usando link de download...');
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `Conversao_Taxas_${Date.now()}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+            
+            // Liberar memória após um pequeno delay (tanto para sucesso quanto fallback)
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            
             console.log('[PDF Export] PDF exportado com sucesso!');
-            toast.success('PDF exportado com sucesso!');
+            toast.success('PDF aberto em nova aba! Use Ctrl+S ou o botão de download do navegador.');
         } catch (error) {
             console.error('[PDF Export] Erro ao exportar PDF:', error);
             toast.error('Erro ao exportar PDF: ' + error.message);

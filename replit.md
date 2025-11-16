@@ -142,6 +142,10 @@ npm run preview
   - Adicionado console.log detalhados para debugging
   - Verificações de existência: `if (data && data.summary && data.summary.length > 0)`
   - Mensagens de erro com toast.error para feedback ao usuário
+  - **Solução para iframe/Replit**: Implementado blob + window.open() em vez de doc.save()
+    - PDFs agora abrem em nova aba (compatível com iframe do Replit)
+    - Fallback automático para download link se popup blocker ativar
+    - Mensagem clara: "PDF aberto em nova aba! Use Ctrl+S ou o botão de download."
   - PDF export agora funcional em todos os 11 simuladores
 
 ### Previous Session - IOF e TAC nos Empréstimos
