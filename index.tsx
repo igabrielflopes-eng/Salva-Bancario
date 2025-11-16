@@ -815,6 +815,183 @@ const styles = `
   
   /* End Comparison Tool Styles */
 
+  /* Keyboard Shortcuts Hint */
+  .keyboard-hint {
+    font-size: 0.75rem;
+    color: var(--text-secondary-color);
+    opacity: 0.7;
+    margin-top: 5px;
+    text-align: center;
+  }
+
+  /* Offline Badge */
+  .offline-badge {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background-color: var(--danger-color);
+    color: white;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    z-index: 1001;
+    box-shadow: var(--box-shadow-medium);
+    animation: slideInLeft 0.3s ease-out;
+  }
+
+  .offline-badge.online {
+    background-color: var(--success-color);
+  }
+
+  @keyframes slideInLeft {
+    from {
+      transform: translateX(-100%);
+      opacity: 0;
+    }
+    to {
+      transform: translateX(0);
+      opacity: 1;
+    }
+  }
+
+  /* Onboarding/Tutorial Styles */
+  .tutorial-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.8);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .tutorial-spotlight {
+    position: fixed;
+    border: 3px solid var(--secondary-color);
+    border-radius: 8px;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.8);
+    pointer-events: none;
+    z-index: 2001;
+    transition: all 0.3s ease;
+  }
+
+  .tutorial-tooltip {
+    position: fixed;
+    background-color: var(--card-bg);
+    color: var(--text-color);
+    padding: 20px;
+    border-radius: 10px;
+    max-width: 400px;
+    z-index: 2002;
+    box-shadow: var(--box-shadow-medium);
+    border: 2px solid var(--secondary-color);
+  }
+
+  .tutorial-tooltip h3 {
+    color: var(--secondary-color);
+    margin-bottom: 10px;
+  }
+
+  .tutorial-tooltip p {
+    margin-bottom: 15px;
+    line-height: 1.5;
+  }
+
+  .tutorial-controls {
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+  }
+
+  .tutorial-progress {
+    font-size: 0.85rem;
+    color: var(--text-secondary-color);
+    margin-bottom: 10px;
+  }
+
+  .help-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: var(--secondary-color);
+    color: white;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    box-shadow: var(--box-shadow-medium);
+    transition: all 0.2s ease;
+    z-index: 1001;
+  }
+
+  .help-button:hover {
+    transform: scale(1.1);
+    background-color: #00a791;
+  }
+
+  /* Share Button Styles */
+  .share-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+    flex-wrap: wrap;
+  }
+
+  .share-buttons .btn {
+    flex: 1;
+    min-width: 150px;
+  }
+
+  /* Save Button Animation */
+  .btn-save.saving {
+    background-color: var(--success-color);
+    animation: pulse 0.5s ease-in-out;
+  }
+
+  @keyframes pulse {
+    0%, 100% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.05);
+    }
+  }
+
+  /* View Transition Animation */
+  .view-transition {
+    animation: fadeInSlide 0.3s ease-out;
+  }
+
+  @keyframes fadeInSlide {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Multi-select Comparison Styles */
+  .comparison-grid.multi {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  }
+
+  @media (max-width: 768px) {
+    .comparison-grid.multi {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* End Comparison Tool Styles */
+
   @media print {
     body {
       background-color: #fff !important;
@@ -1261,13 +1438,62 @@ const calculateIOF = (principal, months, iofAdicionalRate = 0.0038, iofDiarioRat
 };
 
 // --- PDF EXPORT ---
-const exportToPDF = (simulationType, data) => {
+const exportToPDF = async (simulationType, data) => {
     console.log('[PDF Export Global] Iniciando exportação de:', simulationType);
     
     try {
         console.log('[PDF Export Global] Criando documento jsPDF...');
         const doc = new jsPDF();
         const pageWidth = doc.internal.pageSize.width;
+        const pageHeight = doc.internal.pageSize.height;
+        
+        const settings = JSON.parse(localStorage.getItem('appSettings') || '{}');
+        const companyName = settings.companyName || '';
+        const logoUrl = settings.logoUrl || '';
+        
+        // Adicionar logo se fornecida
+        if (logoUrl) {
+            try {
+                console.log('[PDF Export Global] Carregando logo...');
+                const img = new Image();
+                img.crossOrigin = 'Anonymous';
+                await new Promise((resolve, reject) => {
+                    img.onload = () => resolve(img);
+                    img.onerror = reject;
+                    img.src = logoUrl;
+                });
+                
+                // Detectar formato da imagem (PNG, JPG, JPEG)
+                let imageFormat = 'PNG';
+                
+                // Se for data URL, extrair MIME type
+                const dataUrlMatch = logoUrl.match(/^data:(image\/(\w+));/);
+                if (dataUrlMatch) {
+                    const mimeType = dataUrlMatch[2].toLowerCase();
+                    if (mimeType === 'jpeg' || mimeType === 'jpg') {
+                        imageFormat = 'JPEG';
+                    } else if (mimeType === 'png') {
+                        imageFormat = 'PNG';
+                    }
+                } else {
+                    // Se for URL externa, detectar pela extensão
+                    const ext = logoUrl.toLowerCase().split('.').pop()?.split('?')[0];
+                    if (ext === 'jpg' || ext === 'jpeg') {
+                        imageFormat = 'JPEG';
+                    } else if (ext === 'png') {
+                        imageFormat = 'PNG';
+                    }
+                }
+                
+                // Adicionar logo no canto superior direito (20x20)
+                const logoSize = 20;
+                doc.addImage(img, imageFormat, pageWidth - logoSize - 10, 10, logoSize, logoSize);
+                console.log('[PDF Export Global] Logo adicionada com sucesso! Formato:', imageFormat);
+            } catch (error) {
+                console.warn('[PDF Export Global] Erro ao carregar logo:', error);
+                toast.error('Não foi possível carregar a logo. Verifique a URL nas configurações.');
+            }
+        }
         
         console.log('[PDF Export Global] Adicionando cabeçalho...');
         doc.setFontSize(18);
@@ -1312,6 +1538,13 @@ const exportToPDF = (simulationType, data) => {
             });
         }
         
+        if (companyName) {
+            console.log('[PDF Export Global] Adicionando marca d\'água (empresa)...');
+            doc.setFontSize(10);
+            doc.setTextColor(102, 102, 102);
+            doc.text(companyName, pageWidth / 2, pageHeight - 10, { align: 'center' });
+        }
+        
         console.log('[PDF Export Global] Salvando arquivo...');
         
         // Solução para iframe/Replit: usar blob + window.open
@@ -1341,6 +1574,89 @@ const exportToPDF = (simulationType, data) => {
     }
 };
 
+// --- CSV EXPORT ---
+const exportToCSV = (data, filename = 'export.csv') => {
+    try {
+        const { headers, rows } = data;
+        
+        const csvContent = [
+            headers.join(','),
+            ...rows.map(row => row.map(cell => {
+                const cellStr = String(cell || '');
+                if (cellStr.includes(',') || cellStr.includes('"') || cellStr.includes('\n')) {
+                    return `"${cellStr.replace(/"/g, '""')}"`;
+                }
+                return cellStr;
+            }).join(','))
+        ].join('\n');
+        
+        const BOM = '\uFEFF';
+        const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        URL.revokeObjectURL(url);
+        toast.success('CSV exportado com sucesso!');
+    } catch (error) {
+        console.error('Erro ao exportar CSV:', error);
+        toast.error('Erro ao exportar CSV: ' + error.message);
+    }
+};
+
+// --- SHARE FUNCTIONALITY ---
+const shareSimulation = (simulationData, simulationType) => {
+    try {
+        const encodedData = btoa(JSON.stringify(simulationData));
+        const baseUrl = window.location.origin + window.location.pathname;
+        const shareUrl = `${baseUrl}?simulation=${encodedData}`;
+        
+        return {
+            url: shareUrl,
+            whatsappUrl: `https://wa.me/?text=${encodeURIComponent(`Confira minha simulação ${simulationType}: ${shareUrl}`)}`
+        };
+    } catch (error) {
+        console.error('Erro ao gerar link de compartilhamento:', error);
+        toast.error('Erro ao compartilhar: ' + error.message);
+        return null;
+    }
+};
+
+const copyToClipboard = async (text) => {
+    try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(text);
+            toast.success('Link copiado para a área de transferência!');
+        } else {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                document.execCommand('copy');
+                toast.success('Link copiado para a área de transferência!');
+            } catch (err) {
+                toast.error('Não foi possível copiar o link');
+            }
+            
+            document.body.removeChild(textArea);
+        }
+    } catch (error) {
+        console.error('Erro ao copiar:', error);
+        toast.error('Erro ao copiar link');
+    }
+};
+
 // --- SETTINGS & HOOKS ---
 
 // Utility functions for rate conversions
@@ -1363,6 +1679,8 @@ const DEFAULT_SETTINGS = {
     cdbPercentCDI: 1.10, // 110% do CDI
     tdRate: 0.020, // 2.0% a.m.
     tacTD: 150, // R$ 150,00
+    companyName: '', // Nome da Empresa para PDFs
+    logoUrl: '', // URL da Logo para PDFs
     lastUpdated: new Date().toISOString()
 };
 
@@ -1563,30 +1881,59 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                     </div>
                     <p style={{fontSize: '0.8rem', color: 'var(--text-secondary-color)', textAlign: 'center', marginBottom: '15px'}}>CDI: {formatCDI(cdiMonthly, cdiAnnual)}</p>
                     <button className="btn" onClick={handleCalculate}>Calcular</button>
+                    <div className="keyboard-hint">Atalho: ENTER</div>
                     {results && (
-                        <div className="btn-group">
-                            <button className="btn btn-save" onClick={handleSave}>💾 Salvar</button>
-                            <button className="btn btn-secondary" onClick={() => exportToPDF('Simulação de Investimento', {
-                                summary: [
-                                    { label: 'Valor Inicial', value: formatCurrency(results.principal) },
-                                    { label: 'Prazo', value: `${results.numMonths} meses` },
-                                    { label: 'LCA/LCI - Valor Final', value: formatCurrency(results.finalValueLCA) },
-                                    { label: 'LCA/LCI - Rendimento', value: formatCurrency(results.profitLCA) },
-                                    { label: 'LCA/LCI - Taxa Final Líquida', value: `${results.netRateLCA.toFixed(2)}%` },
-                                    { label: 'CDB/RDC - Valor Final Líquido', value: formatCurrency(results.finalValueCDBNet) },
-                                    { label: 'CDB/RDC - Rendimento Líquido', value: formatCurrency(results.profitCDBNet) },
-                                    { label: 'CDB/RDC - Taxa Final Líquida', value: `${results.netRateCDB.toFixed(2)}%` }
-                                ],
-                                table: {
+                        <>
+                            <div className="btn-group">
+                                <button className="btn btn-save" onClick={handleSave}>💾 Salvar</button>
+                                <button className="btn btn-secondary" onClick={() => exportToPDF('Simulação de Investimento', {
+                                    summary: [
+                                        { label: 'Valor Inicial', value: formatCurrency(results.principal) },
+                                        { label: 'Prazo', value: `${results.numMonths} meses` },
+                                        { label: 'LCA/LCI - Valor Final', value: formatCurrency(results.finalValueLCA) },
+                                        { label: 'LCA/LCI - Rendimento', value: formatCurrency(results.profitLCA) },
+                                        { label: 'LCA/LCI - Taxa Final Líquida', value: `${results.netRateLCA.toFixed(2)}%` },
+                                        { label: 'CDB/RDC - Valor Final Líquido', value: formatCurrency(results.finalValueCDBNet) },
+                                        { label: 'CDB/RDC - Rendimento Líquido', value: formatCurrency(results.profitCDBNet) },
+                                        { label: 'CDB/RDC - Taxa Final Líquida', value: `${results.netRateCDB.toFixed(2)}%` }
+                                    ],
+                                    table: {
+                                        headers: ['Mês', 'Saldo LCA/LCI', 'Saldo CDB/RDC'],
+                                        rows: results.tableData.map(row => [
+                                            row.month,
+                                            formatCurrency(row.balanceLCA),
+                                            formatCurrency(row.balanceCDB)
+                                        ])
+                                    }
+                                })}>📄 Exportar PDF</button>
+                                <button className="btn btn-secondary" onClick={() => exportToCSV({
                                     headers: ['Mês', 'Saldo LCA/LCI', 'Saldo CDB/RDC'],
                                     rows: results.tableData.map(row => [
                                         row.month,
                                         formatCurrency(row.balanceLCA),
                                         formatCurrency(row.balanceCDB)
                                     ])
-                                }
-                            })}>📄 Exportar PDF</button>
-                        </div>
+                                }, 'investimento.csv')}>📊 Exportar CSV</button>
+                            </div>
+                            <div className="share-buttons">
+                                <button className="btn btn-secondary" onClick={() => {
+                                    const shareData = shareSimulation(results, 'Simulação de Investimento');
+                                    if (shareData) {
+                                        window.open(shareData.whatsappUrl, '_blank');
+                                    }
+                                }}>
+                                    💬 Compartilhar no WhatsApp
+                                </button>
+                                <button className="btn btn-secondary" onClick={() => {
+                                    const shareData = shareSimulation(results, 'Simulação de Investimento');
+                                    if (shareData) {
+                                        copyToClipboard(shareData.url);
+                                    }
+                                }}>
+                                    📋 Copiar Link
+                                </button>
+                            </div>
+                        </>
                     )}
                 </div>
 
@@ -1913,26 +2260,39 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
                         <input type="text" id="tac" value={tac} onChange={handleCurrencyChange(setTac)} inputMode="decimal" />
                     </div>
                      <button className="btn" onClick={handleCalculate}>Calcular</button>
+                    <div className="keyboard-hint">Atalho: ENTER</div>
                     {results && (
-                        <div className="btn-group">
-                            <button className="btn btn-save" onClick={handleSave}>💾 Salvar</button>
-                            <button className="btn btn-secondary" onClick={() => exportToPDF('Simulação de Empréstimo', {
-                                summary: [
-                                    { label: 'Valor Solicitado', value: formatCurrency(results.principal) },
-                                    { label: 'IOF Adicional (0,38%)', value: formatCurrency(results.iofAdicional) },
-                                    { label: `IOF Diário (${results.iofDias} dias)`, value: formatCurrency(results.iofDiario) },
-                                    { label: 'IOF Total', value: formatCurrency(results.iofValue) },
-                                    { label: 'TAC', value: formatCurrency(results.tacValue) },
-                                    { label: 'Financiar IOF', value: results.financeIOF ? 'Sim' : 'Não' },
-                                    { label: 'Valor Financiado', value: formatCurrency(results.effectivePrincipal) },
-                                    { label: 'Prazo', value: `${results.numMonths} meses` },
-                                    { label: 'Sistema', value: results.system === 'price' ? 'PRICE (Parcelas Fixas)' : 'SAC (Parcelas Decrescentes)' },
-                                    { label: 'Primeira Parcela', value: formatCurrency(results.firstPayment) },
-                                    { label: 'Última Parcela', value: formatCurrency(results.lastPayment) },
-                                    { label: 'Total de Juros', value: formatCurrency(results.totalInterest) },
-                                    { label: 'Custo Total', value: formatCurrency(results.totalCost) }
-                                ],
-                                table: {
+                        <>
+                            <div className="btn-group">
+                                <button className="btn btn-save" onClick={handleSave}>💾 Salvar</button>
+                                <button className="btn btn-secondary" onClick={() => exportToPDF('Simulação de Empréstimo', {
+                                    summary: [
+                                        { label: 'Valor Solicitado', value: formatCurrency(results.principal) },
+                                        { label: 'IOF Adicional (0,38%)', value: formatCurrency(results.iofAdicional) },
+                                        { label: `IOF Diário (${results.iofDias} dias)`, value: formatCurrency(results.iofDiario) },
+                                        { label: 'IOF Total', value: formatCurrency(results.iofValue) },
+                                        { label: 'TAC', value: formatCurrency(results.tacValue) },
+                                        { label: 'Financiar IOF', value: results.financeIOF ? 'Sim' : 'Não' },
+                                        { label: 'Valor Financiado', value: formatCurrency(results.effectivePrincipal) },
+                                        { label: 'Prazo', value: `${results.numMonths} meses` },
+                                        { label: 'Sistema', value: results.system === 'price' ? 'PRICE (Parcelas Fixas)' : 'SAC (Parcelas Decrescentes)' },
+                                        { label: 'Primeira Parcela', value: formatCurrency(results.firstPayment) },
+                                        { label: 'Última Parcela', value: formatCurrency(results.lastPayment) },
+                                        { label: 'Total de Juros', value: formatCurrency(results.totalInterest) },
+                                        { label: 'Custo Total', value: formatCurrency(results.totalCost) }
+                                    ],
+                                    table: {
+                                        headers: ['Mês', 'Parcela', 'Amortização', 'Juros', 'Saldo'],
+                                        rows: results.tableData.map(row => [
+                                            row.month,
+                                            formatCurrency(row.payment),
+                                            formatCurrency(row.principal),
+                                            formatCurrency(row.interest),
+                                            formatCurrency(row.balance)
+                                        ])
+                                    }
+                                })}>📄 Exportar PDF</button>
+                                <button className="btn btn-secondary" onClick={() => exportToCSV({
                                     headers: ['Mês', 'Parcela', 'Amortização', 'Juros', 'Saldo'],
                                     rows: results.tableData.map(row => [
                                         row.month,
@@ -1941,9 +2301,27 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
                                         formatCurrency(row.interest),
                                         formatCurrency(row.balance)
                                     ])
-                                }
-                            })}>📄 Exportar PDF</button>
-                        </div>
+                                }, 'emprestimo.csv')}>📊 Exportar CSV</button>
+                            </div>
+                            <div className="share-buttons">
+                                <button className="btn btn-secondary" onClick={() => {
+                                    const shareData = shareSimulation(results, 'Simulação de Empréstimo');
+                                    if (shareData) {
+                                        window.open(shareData.whatsappUrl, '_blank');
+                                    }
+                                }}>
+                                    💬 Compartilhar no WhatsApp
+                                </button>
+                                <button className="btn btn-secondary" onClick={() => {
+                                    const shareData = shareSimulation(results, 'Simulação de Empréstimo');
+                                    if (shareData) {
+                                        copyToClipboard(shareData.url);
+                                    }
+                                }}>
+                                    📋 Copiar Link
+                                </button>
+                            </div>
+                        </>
                     )}
                 </div>
                  <div className="results-section">
@@ -3029,8 +3407,10 @@ const ComparisonTool = ({ history, onClose }) => {
             if (newSelection.has(id)) {
                 newSelection.delete(id);
             } else {
-                if (newSelection.size < 2) {
+                if (newSelection.size < 4) {
                     newSelection.add(id);
+                } else {
+                    toast.error('Você pode comparar até 4 simulações por vez.');
                 }
             }
             return Array.from(newSelection);
@@ -3184,7 +3564,7 @@ const ComparisonTool = ({ history, onClose }) => {
                     <p>Você precisa de pelo menos duas simulações salvas para comparar.</p>
                 ) : (
                     <>
-                        <p>Selecione duas simulações do mesmo tipo para comparar.</p>
+                        <p>Selecione de 2 até 4 simulações do mesmo tipo para comparar.</p>
                         <div className="selection-list">
                             {compatibleSimulations.map(sim => (
                                 <div
@@ -3239,6 +3619,8 @@ const SettingsMenu = () => {
     const [cdbPercentInput, setCdbPercentInput] = useState((settings.cdbPercentCDI * 100).toFixed(0));
     const [tdRateInput, setTdRateInput] = useState((settings.tdRate * 100).toFixed(2));
     const [tacTDInput, setTacTDInput] = useState(formatCurrency(settings.tacTD));
+    const [companyNameInput, setCompanyNameInput] = useState(settings.companyName || '');
+    const [logoUrlInput, setLogoUrlInput] = useState(settings.logoUrl || '');
 
     // Calculate monthly rates for display
     const cdiMonthly = annualToMonthly(parseFloat(cdiAnnualInput) / 100);
@@ -3255,7 +3637,9 @@ const SettingsMenu = () => {
             lcaPercentCDI: parseFloat(lcaPercentInput) / 100,
             cdbPercentCDI: parseFloat(cdbPercentInput) / 100,
             tdRate: parseFloat(tdRateInput) / 100,
-            tacTD: parseCurrency(tacTDInput)
+            tacTD: parseCurrency(tacTDInput),
+            companyName: companyNameInput,
+            logoUrl: logoUrlInput
         };
         updateSettings(newSettings);
     };
@@ -3273,6 +3657,8 @@ const SettingsMenu = () => {
             setCdbPercentInput((DEFAULT_SETTINGS.cdbPercentCDI * 100).toFixed(0));
             setTdRateInput((DEFAULT_SETTINGS.tdRate * 100).toFixed(2));
             setTacTDInput(formatCurrency(DEFAULT_SETTINGS.tacTD));
+            setCompanyNameInput(DEFAULT_SETTINGS.companyName || '');
+            setLogoUrlInput(DEFAULT_SETTINGS.logoUrl || '');
         }
     };
 
@@ -3451,6 +3837,38 @@ const SettingsMenu = () => {
                             value={tacTDInput} 
                             onChange={handleCurrencyChange(setTacTDInput)}
                             inputMode="decimal"
+                        />
+                    </div>
+
+                    <h4 style={{marginTop: '20px', marginBottom: '10px', color: 'var(--primary-color)'}}>🏢 Branding / Marca d'água</h4>
+                    
+                    <div className="form-group">
+                        <label>
+                            Nome da Empresa
+                            <Tooltip text="Nome da sua empresa que será exibido no rodapé dos PDFs exportados.">
+                                <span className="tooltip-icon">?</span>
+                            </Tooltip>
+                        </label>
+                        <input 
+                            type="text" 
+                            value={companyNameInput} 
+                            onChange={e => setCompanyNameInput(e.target.value)}
+                            placeholder="Ex: Minha Empresa Ltda"
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label>
+                            URL da Logo (opcional)
+                            <Tooltip text="URL da logo da sua empresa para aparecer nos PDFs. Deixe em branco se não quiser usar.">
+                                <span className="tooltip-icon">?</span>
+                            </Tooltip>
+                        </label>
+                        <input 
+                            type="text" 
+                            value={logoUrlInput} 
+                            onChange={e => setLogoUrlInput(e.target.value)}
+                            placeholder="https://exemplo.com/logo.png"
                         />
                     </div>
 
@@ -3890,6 +4308,104 @@ const InterestRateConverter = () => {
     );
 };
 
+const TutorialOverlay = ({ onClose }) => {
+    const [currentStep, setCurrentStep] = useState(0);
+    
+    const tutorialSteps = [
+        {
+            title: '👋 Bem-vindo ao Salva Bancário!',
+            description: 'Este é o seu canivete suíço de ferramentas financeiras. Vamos fazer um tour rápido pelas funcionalidades principais.',
+            position: { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' },
+            spotlight: null
+        },
+        {
+            title: '💰 Simuladores de Investimento',
+            description: 'Compare rentabilidades entre LCA/LCI e CDB/RDC com diferentes taxas e prazos.',
+            position: { top: '30%', left: '20%' },
+            spotlight: null
+        },
+        {
+            title: '💸 Empréstimos',
+            description: 'Calcule empréstimos prefixados ou pós-fixados com sistemas SAC ou Price.',
+            position: { top: '40%', left: '30%' },
+            spotlight: null
+        },
+        {
+            title: '⚙️ Definições',
+            description: 'Configure taxas padrão (CDI, SELIC, taxas de empréstimo) e personalize seus PDFs com o nome da sua empresa.',
+            position: { top: '50%', left: '40%' },
+            spotlight: null
+        },
+        {
+            title: '🗂️ Histórico e Comparação',
+            description: 'Todas as suas simulações são salvas automaticamente. Você pode comparar até 4 simulações lado a lado!',
+            position: { top: '60%', left: '30%' },
+            spotlight: null
+        },
+        {
+            title: '⌨️ Atalhos de Teclado',
+            description: 'Use ESC para voltar ao menu, ENTER para calcular, e Ctrl/Cmd+K para abrir as definições rapidamente.',
+            position: { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' },
+            spotlight: null
+        }
+    ];
+    
+    const step = tutorialSteps[currentStep];
+    
+    const handleNext = () => {
+        if (currentStep < tutorialSteps.length - 1) {
+            setCurrentStep(currentStep + 1);
+        } else {
+            handleFinish();
+        }
+    };
+    
+    const handlePrevious = () => {
+        if (currentStep > 0) {
+            setCurrentStep(currentStep - 1);
+        }
+    };
+    
+    const handleSkip = () => {
+        if (confirm('Deseja pular o tutorial? Você pode revê-lo a qualquer momento clicando no botão "?" no canto inferior direito.')) {
+            handleFinish();
+        }
+    };
+    
+    const handleFinish = () => {
+        localStorage.setItem('tutorialCompleted', 'true');
+        toast.success('Tutorial concluído! Clique no "?" se precisar de ajuda.');
+        onClose();
+    };
+    
+    return (
+        <>
+            <div className="tutorial-overlay" onClick={handleSkip}></div>
+            {step.spotlight && <div className="tutorial-spotlight" style={step.spotlight}></div>}
+            <div className="tutorial-tooltip" style={step.position} onClick={e => e.stopPropagation()}>
+                <div className="tutorial-progress">Passo {currentStep + 1} de {tutorialSteps.length}</div>
+                <h3>{step.title}</h3>
+                <p>{step.description}</p>
+                <div className="tutorial-controls">
+                    <button className="btn btn-secondary" onClick={handleSkip} style={{fontSize: '0.9rem', padding: '8px 15px'}}>
+                        Pular Tutorial
+                    </button>
+                    <div style={{display: 'flex', gap: '10px'}}>
+                        {currentStep > 0 && (
+                            <button className="btn btn-secondary" onClick={handlePrevious} style={{fontSize: '0.9rem', padding: '8px 15px'}}>
+                                ← Anterior
+                            </button>
+                        )}
+                        <button className="btn" onClick={handleNext} style={{fontSize: '0.9rem', padding: '8px 15px'}}>
+                            {currentStep === tutorialSteps.length - 1 ? '✓ Concluir' : 'Próximo →'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </>
+    );
+};
+
 const MainMenu = ({ setView }) => {
     return (
         <>
@@ -3930,6 +4446,8 @@ const App = () => {
     const { cdiRate, loading: cdiLoading, error: cdiError } = useCDI();
     
     const [modal, setModal] = useState(null); // 'history' or 'comparison'
+    const [isOnline, setIsOnline] = useState(navigator.onLine);
+    const [showTutorial, setShowTutorial] = useState(false);
 
     useEffect(() => {
         localStorage.setItem('simulationHistory', JSON.stringify(history));
@@ -3949,6 +4467,59 @@ const App = () => {
             setModal('comparison');
             setCurrentView('main');
         }
+    }, [currentView]);
+    
+    useEffect(() => {
+        const tutorialCompleted = localStorage.getItem('tutorialCompleted');
+        if (!tutorialCompleted) {
+            setTimeout(() => setShowTutorial(true), 1000);
+        }
+    }, []);
+    
+    useEffect(() => {
+        const handleOnline = () => {
+            setIsOnline(true);
+            localStorage.setItem('lastOnline', new Date().toISOString());
+            toast.success('Conexão restaurada! Você está online.');
+        };
+        
+        const handleOffline = () => {
+            setIsOnline(false);
+            toast.error('Modo offline ativado. Suas alterações serão salvas localmente.');
+        };
+        
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+        
+        return () => {
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+        };
+    }, []);
+    
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape' && currentView !== 'main') {
+                setCurrentView('main');
+                toast('Voltando ao menu principal...', { icon: '🏠' });
+            }
+            
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                setCurrentView('settings');
+                toast('Abrindo definições...', { icon: '⚙️' });
+            }
+            
+            if (e.key === 'Enter' && currentView !== 'main') {
+                const calculateButton = document.querySelector('button.btn:not(.btn-secondary)');
+                if (calculateButton && calculateButton.textContent.includes('Calcular')) {
+                    calculateButton.click();
+                }
+            }
+        };
+        
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
     }, [currentView]);
 
 
@@ -4082,13 +4653,35 @@ const App = () => {
              <button className="theme-toggle-btn" onClick={toggleTheme} aria-label="Mudar tema">
                 {theme === 'light' ? '🌙' : '☀️'}
             </button>
-            <div className="app-container">
-                 {currentView !== 'main' && <button className="btn btn-secondary no-print" onClick={() => setCurrentView('main')} style={{maxWidth: '200px', marginBottom: '20px'}}>Voltar ao Menu</button>}
+            <div className="app-container view-transition">
+                 {currentView !== 'main' && (
+                     <div>
+                         <button className="btn btn-secondary no-print" onClick={() => setCurrentView('main')} style={{maxWidth: '200px', marginBottom: '20px'}}>
+                             Voltar ao Menu
+                         </button>
+                         <div className="keyboard-hint">Atalho: ESC</div>
+                     </div>
+                 )}
                 {renderCurrentView()}
             </div>
             
+            {!isOnline && (
+                <div className="offline-badge">
+                    📡 Modo Offline
+                </div>
+            )}
+            
+            <button 
+                className="help-button no-print" 
+                onClick={() => setShowTutorial(true)}
+                aria-label="Ajuda / Tutorial"
+            >
+                ?
+            </button>
+            
             {modal === 'history' && <HistoryModal history={history} onClose={() => setModal(null)} onLoad={handleLoadSimulation} onClear={handleClearHistory} />}
             {modal === 'comparison' && <ComparisonTool history={history} onClose={() => setModal(null)} />}
+            {showTutorial && <TutorialOverlay onClose={() => setShowTutorial(false)} />}
         </>
     );
 };
