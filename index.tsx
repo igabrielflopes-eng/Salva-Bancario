@@ -2202,6 +2202,7 @@ const RuralCreditSimulator = ({ onSave }) => {
     const [graceYears, setGraceYears] = useState('2');
     const [noGracePeriod, setNoGracePeriod] = useState(false);
     const [graceInterest, setGraceInterest] = useState('accumulate');
+    const [system, setSystem] = useState('price');
     const [results, setResults] = useState(null);
     const [error, setError] = useState('');
 
@@ -2260,32 +2261,62 @@ const RuralCreditSimulator = ({ onSave }) => {
         // Amortization Period
         const amortizationYears = numTotalYears - numGraceYears;
         let annualPayment = 0;
+        let firstPayment = 0;
+        let lastPayment = 0;
 
         if (amortizationYears > 0) {
-            const factor = Math.pow(1 + rate, amortizationYears);
-            const denominator = factor - 1;
-            
-            if (Math.abs(denominator) < 0.000001) {
-                // Handle near-zero rate case analytically (flat amortization)
-                annualPayment = principalAfterGrace / amortizationYears;
-            } else {
-                annualPayment = principalAfterGrace * (rate * factor) / denominator;
-            }
+            if (system === 'price') {
+                // PRICE: Fixed payments
+                const factor = Math.pow(1 + rate, amortizationYears);
+                const denominator = factor - 1;
+                
+                if (Math.abs(denominator) < 0.000001) {
+                    // Handle near-zero rate case analytically (flat amortization)
+                    annualPayment = principalAfterGrace / amortizationYears;
+                } else {
+                    annualPayment = principalAfterGrace * (rate * factor) / denominator;
+                }
+                firstPayment = lastPayment = annualPayment;
 
-            for (let i = 1; i <= amortizationYears; i++) {
-                const year = numGraceYears + i;
-                const interestComponent = currentBalance * rate;
-                const principalComponent = annualPayment - interestComponent;
-                currentBalance -= principalComponent;
-                totalInterestPaid += interestComponent;
-                tableData.push({
-                    year: year,
-                    isGrace: false,
-                    payment: annualPayment,
-                    principal: principalComponent,
-                    interest: interestComponent,
-                    balance: Math.abs(currentBalance),
-                });
+                for (let i = 1; i <= amortizationYears; i++) {
+                    const year = numGraceYears + i;
+                    const interestComponent = currentBalance * rate;
+                    const principalComponent = annualPayment - interestComponent;
+                    currentBalance -= principalComponent;
+                    totalInterestPaid += interestComponent;
+                    tableData.push({
+                        year: year,
+                        isGrace: false,
+                        payment: annualPayment,
+                        principal: principalComponent,
+                        interest: interestComponent,
+                        balance: Math.abs(currentBalance),
+                    });
+                }
+            } else {
+                // SAC: Constant principal amortization
+                const principalComponent = principalAfterGrace / amortizationYears;
+                
+                for (let i = 1; i <= amortizationYears; i++) {
+                    const year = numGraceYears + i;
+                    const interestComponent = currentBalance * rate;
+                    const payment = principalComponent + interestComponent;
+                    currentBalance -= principalComponent;
+                    totalInterestPaid += interestComponent;
+                    
+                    if (i === 1) firstPayment = payment;
+                    if (i === amortizationYears) lastPayment = payment;
+                    
+                    tableData.push({
+                        year: year,
+                        isGrace: false,
+                        payment: payment,
+                        principal: principalComponent,
+                        interest: interestComponent,
+                        balance: Math.abs(currentBalance),
+                    });
+                }
+                annualPayment = firstPayment;
             }
         }
         
@@ -2298,11 +2329,14 @@ const RuralCreditSimulator = ({ onSave }) => {
             graceYears: numGraceYears,
             principalAfterGrace,
             annualPayment,
+            firstPayment,
+            lastPayment,
             totalPaid,
             totalInterest: totalInterestPaid,
-            tableData
+            tableData,
+            system
         };
-    }, [loanAmount, annualRate, totalYears, graceYears, noGracePeriod, graceInterest]);
+    }, [loanAmount, annualRate, totalYears, graceYears, noGracePeriod, graceInterest, system]);
 
     const handleCalculate = () => {
         if (error) return;
@@ -2334,6 +2368,14 @@ const RuralCreditSimulator = ({ onSave }) => {
                     <div className="form-group">
                         <label>Prazo Total (anos)</label>
                         <input type="number" value={totalYears} onChange={e => setTotalYears(e.target.value)} />
+                    </div>
+                    
+                    <div className="form-group">
+                        <label>Sistema de Amortização</label>
+                        <select value={system} onChange={e => setSystem(e.target.value)}>
+                            <option value="price">PRICE (Parcelas Fixas)</option>
+                            <option value="sac">SAC (Parcelas Decrescentes)</option>
+                        </select>
                     </div>
                     
                     <div className="form-group-toggle">
@@ -2372,8 +2414,15 @@ const RuralCreditSimulator = ({ onSave }) => {
                                     { label: 'Taxa de Juros Anual', value: formatPercentage(results.annualRate) },
                                     { label: 'Prazo Total', value: `${results.totalYears} anos` },
                                     { label: 'Anos de Carência', value: `${results.graceYears} anos` },
+                                    { label: 'Sistema de Amortização', value: results.system === 'price' ? 'PRICE (Parcelas Fixas)' : 'SAC (Parcelas Decrescentes)' },
                                     { label: 'Saldo Pós-Carência', value: formatCurrency(results.principalAfterGrace) },
-                                    { label: 'Parcela Anual', value: formatCurrency(results.annualPayment) },
+                                    ...(results.system === 'price' 
+                                        ? [{ label: 'Parcela Anual', value: formatCurrency(results.annualPayment) }]
+                                        : [
+                                            { label: 'Primeira Parcela', value: formatCurrency(results.firstPayment) },
+                                            { label: 'Última Parcela', value: formatCurrency(results.lastPayment) }
+                                          ]
+                                    ),
                                     { label: 'Total de Juros', value: formatCurrency(results.totalInterest) },
                                     { label: 'Total Pago', value: formatCurrency(results.totalPaid) }
                                 ],
@@ -2398,9 +2447,15 @@ const RuralCreditSimulator = ({ onSave }) => {
                         <>
                             <div className="results-summary">
                                 <div className="summary-item">
-                                    <h4>Parcela Anual (Pós-Carência)</h4>
-                                    <p>{formatCurrency(results.annualPayment)}</p>
+                                    <h4>{results.system === 'price' ? 'Parcela Anual (Pós-Carência)' : 'Primeira Parcela'}</h4>
+                                    <p>{formatCurrency(results.system === 'price' ? results.annualPayment : results.firstPayment)}</p>
                                 </div>
+                                {results.system === 'sac' && (
+                                    <div className="summary-item">
+                                        <h4>Última Parcela</h4>
+                                        <p>{formatCurrency(results.lastPayment)}</p>
+                                    </div>
+                                )}
                                 <div className="summary-item">
                                     <h4>Saldo Devedor Pós-Carência</h4>
                                     <p>{formatCurrency(results.principalAfterGrace)}</p>
