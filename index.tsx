@@ -1519,11 +1519,11 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                     <h3>Simulador de Investimentos</h3>
                     <div className="form-group">
                         <label htmlFor="initialValue">Valor Inicial (R$)</label>
-                        <input type="text" id="initialValue" value={initialValue} onChange={handleCurrencyChange(setInitialValue)} />
+                        <input type="text" id="initialValue" value={initialValue} onChange={handleCurrencyChange(setInitialValue)} inputMode="decimal" />
                     </div>
                     <div className="form-group">
                         <label htmlFor="months">Prazo (meses)</label>
-                        <input type="number" id="months" value={months} onChange={e => setMonths(e.target.value)} />
+                        <input type="number" id="months" value={months} onChange={e => setMonths(e.target.value)} inputMode="numeric" />
                     </div>
                      <div className="form-group">
                         <label htmlFor="lcaProfitability">
@@ -1532,7 +1532,7 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                                 <span className="tooltip-icon">?</span>
                             </Tooltip>
                         </label>
-                        <input type="number" id="lcaProfitability" value={lcaProfitability} onChange={e => setLcaProfitability(e.target.value)} />
+                        <input type="number" id="lcaProfitability" value={lcaProfitability} onChange={e => setLcaProfitability(e.target.value)} inputMode="decimal" />
                     </div>
                     <div className="form-group">
                         <label htmlFor="cdbProfitability">
@@ -1541,7 +1541,7 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                                 <span className="tooltip-icon">?</span>
                             </Tooltip>
                         </label>
-                        <input type="number" id="cdbProfitability" value={cdbProfitability} onChange={e => setCdbProfitability(e.target.value)} />
+                        <input type="number" id="cdbProfitability" value={cdbProfitability} onChange={e => setCdbProfitability(e.target.value)} inputMode="decimal" />
                     </div>
                     <p style={{fontSize: '0.8rem', color: 'var(--text-secondary-color)', textAlign: 'center', marginBottom: '15px'}}>CDI: {formatCDI(cdiMonthly, cdiAnnual)}</p>
                     <button className="btn" onClick={handleCalculate}>Calcular</button>
@@ -1831,7 +1831,7 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
                     <h3>Empréstimo {isPostFixed ? "Pós-fixado" : "Prefixado"}</h3>
                      <div className="form-group">
                         <label htmlFor="loanAmount">Valor do Empréstimo (R$)</label>
-                        <input type="text" id="loanAmount" value={loanAmount} onChange={handleCurrencyChange(setLoanAmount)} />
+                        <input type="text" id="loanAmount" value={loanAmount} onChange={handleCurrencyChange(setLoanAmount)} inputMode="decimal" />
                     </div>
                     <div className="form-group">
                         <label>Prazo (Meses)</label>
@@ -1842,7 +1842,7 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
                             <button onClick={handleCustomClick} className={isCustomMonths ? 'active' : ''}>Personal.</button>
                         </div>
                         {isCustomMonths && (
-                            <input type="number" value={customMonths} onChange={e => setCustomMonths(e.target.value)} placeholder="Digite os meses" />
+                            <input type="number" value={customMonths} onChange={e => setCustomMonths(e.target.value)} placeholder="Digite os meses" inputMode="numeric" />
                         )}
                     </div>
                     {isPostFixed ? (
@@ -1856,6 +1856,7 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
                                     onChange={e => setFixedSpread(e.target.value)} 
                                     placeholder="0.5" 
                                     step="0.01"
+                                    inputMode="decimal"
                                 />
                                 <p style={{fontSize: '0.8rem', color: 'var(--text-secondary-color)', textAlign: 'center', marginTop: '5px'}}>
                                     CDI: {formatCDI(cdiMonthly, cdiAnnual)}<br/>
@@ -1866,7 +1867,7 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
                     ) : (
                         <div className="form-group">
                             <label htmlFor="interestRate">Taxa de Juros Mensal (%)</label>
-                            <input type="number" id="interestRate" value={interestRate} onChange={e => setInterestRate(e.target.value)} />
+                            <input type="number" id="interestRate" value={interestRate} onChange={e => setInterestRate(e.target.value)} inputMode="decimal" />
                         </div>
                     )}
                     <div className="form-group">
@@ -1878,7 +1879,7 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
                     </div>
                     <div className="form-group">
                         <label htmlFor="iof">IOF (%)</label>
-                        <input type="number" id="iof" value={iof} onChange={e => setIof(e.target.value)} step="0.01" />
+                        <input type="number" id="iof" value={iof} onChange={e => setIof(e.target.value)} step="0.01" inputMode="decimal" />
                     </div>
                     <div className="form-group-toggle">
                         <input type="checkbox" id="financeIOF" checked={financeIOF} onChange={e => setFinanceIOF(e.target.checked)} />
@@ -1886,7 +1887,7 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
                     </div>
                     <div className="form-group">
                         <label htmlFor="tac">TAC - Taxa de Abertura de Crédito (R$)</label>
-                        <input type="text" id="tac" value={tac} onChange={handleCurrencyChange(setTac)} />
+                        <input type="text" id="tac" value={tac} onChange={handleCurrencyChange(setTac)} inputMode="decimal" />
                     </div>
                      <button className="btn" onClick={handleCalculate}>Calcular</button>
                     {results && (
@@ -2103,11 +2104,11 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
                     <h3>Aplicação Programada</h3>
                     <div className="form-group">
                         <label>Aporte Inicial (R$)</label>
-                        <input type="text" value={initialDeposit} onChange={handleCurrencyChange(setInitialDeposit)} />
+                        <input type="text" value={initialDeposit} onChange={handleCurrencyChange(setInitialDeposit)} inputMode="decimal" />
                     </div>
                     <div className="form-group">
                         <label>Aportes Mensais (R$)</label>
-                        <input type="text" value={monthlyDeposit} onChange={handleCurrencyChange(setMonthlyDeposit)} />
+                        <input type="text" value={monthlyDeposit} onChange={handleCurrencyChange(setMonthlyDeposit)} inputMode="decimal" />
                     </div>
                     <div className="form-group">
                         <label>Prazo (Meses)</label>
@@ -2118,16 +2119,16 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
                             <button onClick={handleCustomClick} className={isCustomMonths ? 'active' : ''}>Personal.</button>
                         </div>
                         {isCustomMonths && (
-                            <input type="number" value={customMonths} onChange={e => setCustomMonths(e.target.value)} placeholder="Digite os meses" />
+                            <input type="number" value={customMonths} onChange={e => setCustomMonths(e.target.value)} placeholder="Digite os meses" inputMode="numeric" />
                         )}
                     </div>
                     <div className="form-group">
                         <label>Rentabilidade LCA/LCI (% do CDI)</label>
-                        <input type="number" value={lcaProfitability} onChange={e => setLcaProfitability(e.target.value)} />
+                        <input type="number" value={lcaProfitability} onChange={e => setLcaProfitability(e.target.value)} inputMode="decimal" />
                     </div>
                     <div className="form-group">
                         <label>Rentabilidade CDB/RDC (% do CDI)</label>
-                        <input type="number" value={cdbProfitability} onChange={e => setCdbProfitability(e.target.value)} />
+                        <input type="number" value={cdbProfitability} onChange={e => setCdbProfitability(e.target.value)} inputMode="decimal" />
                     </div>
                      <p className="form-note">Observação: Aplicações em LCA/LCI podem ter carência (ex: 6 meses). Cada novo aporte pode estar sujeito a uma nova carência.</p>
                      <p style={{fontSize: '0.8rem', color: 'var(--text-secondary-color)', textAlign: 'center', marginBottom: '15px'}}>CDI: {formatCDI(cdiMonthly, cdiAnnual)}</p>
@@ -2311,15 +2312,15 @@ const CompetitorRateFinder = ({ onSave }) => {
                     <h3>Apurar Taxa do Concorrente</h3>
                      <div className="form-group">
                         <label htmlFor="loanAmount">Valor do Empréstimo (R$)</label>
-                        <input type="text" id="loanAmount" value={loanAmount} onChange={handleCurrencyChange(setLoanAmount)} />
+                        <input type="text" id="loanAmount" value={loanAmount} onChange={handleCurrencyChange(setLoanAmount)} inputMode="decimal" />
                     </div>
                      <div className="form-group">
                         <label htmlFor="monthlyPayment">Valor da Parcela (R$)</label>
-                        <input type="text" id="monthlyPayment" value={monthlyPayment} onChange={handleCurrencyChange(setMonthlyPayment)} />
+                        <input type="text" id="monthlyPayment" value={monthlyPayment} onChange={handleCurrencyChange(setMonthlyPayment)} inputMode="decimal" />
                     </div>
                     <div className="form-group">
                         <label htmlFor="months">Quantidade de Meses</label>
-                        <input type="number" id="months" value={months} onChange={e => setMonths(e.target.value)} />
+                        <input type="number" id="months" value={months} onChange={e => setMonths(e.target.value)} inputMode="numeric" />
                     </div>
                      {error && <p style={{ color: 'var(--danger-color)', textAlign: 'center', marginBottom: '15px' }}>{error}</p>}
                      <button className="btn" onClick={handleCalculate}>Calcular Taxa</button>
@@ -2521,15 +2522,15 @@ const RuralCreditSimulator = ({ onSave }) => {
                     <h3>Simulador de Crédito Rural</h3>
                     <div className="form-group">
                         <label>Valor do Financiamento (R$)</label>
-                        <input type="text" value={loanAmount} onChange={handleCurrencyChange(setLoanAmount)} />
+                        <input type="text" value={loanAmount} onChange={handleCurrencyChange(setLoanAmount)} inputMode="decimal" />
                     </div>
                     <div className="form-group">
                         <label>Taxa de Juros Anual (%)</label>
-                        <input type="number" value={annualRate} onChange={e => setAnnualRate(e.target.value)} />
+                        <input type="number" value={annualRate} onChange={e => setAnnualRate(e.target.value)} inputMode="decimal" />
                     </div>
                     <div className="form-group">
                         <label>Prazo Total (anos)</label>
-                        <input type="number" value={totalYears} onChange={e => setTotalYears(e.target.value)} />
+                        <input type="number" value={totalYears} onChange={e => setTotalYears(e.target.value)} inputMode="numeric" />
                     </div>
                     
                     <div className="form-group">
@@ -2549,7 +2550,7 @@ const RuralCreditSimulator = ({ onSave }) => {
                         <>
                              <div className="form-group">
                                 <label>Prazo de Carência (anos)</label>
-                                <input type="number" value={graceYears} onChange={e => setGraceYears(e.target.value)} disabled={noGracePeriod} />
+                                <input type="number" value={graceYears} onChange={e => setGraceYears(e.target.value)} disabled={noGracePeriod} inputMode="numeric" />
                             </div>
                              <div className="form-group">
                                 <label>
@@ -2795,7 +2796,7 @@ const ReceivablesDiscountSimulator = ({ onSave }) => {
                     <div className="form-group inline">
                         <div>
                             <label>Valor do Título</label>
-                            <input type="text" value={currentValue} onChange={handleCurrencyChange(setCurrentValue)} />
+                            <input type="text" value={currentValue} onChange={handleCurrencyChange(setCurrentValue)} inputMode="decimal" />
                         </div>
                          <div>
                             <label>Vencimento</label>
@@ -2823,7 +2824,7 @@ const ReceivablesDiscountSimulator = ({ onSave }) => {
                     )}
                      <div className="form-group">
                         <label>Taxa de Juros Mensal (%)</label>
-                        <input type="text" value={interestRate} onChange={e => setInterestRate(e.target.value)} />
+                        <input type="text" value={interestRate} onChange={e => setInterestRate(e.target.value)} inputMode="decimal" />
                     </div>
                     <div className="form-group">
                         <label>
@@ -2832,7 +2833,7 @@ const ReceivablesDiscountSimulator = ({ onSave }) => {
                                 <span className="tooltip-icon">?</span>
                             </Tooltip>
                         </label>
-                        <input type="text" value={tac} onChange={handleCurrencyChange(setTac)} />
+                        <input type="text" value={tac} onChange={handleCurrencyChange(setTac)} inputMode="decimal" />
                     </div>
                     {error && <p style={{ color: 'var(--danger-color)', textAlign: 'center', marginBottom: '15px' }}>{error}</p>}
                     <button className="btn" onClick={handleCalculate} disabled={receivables.length === 0}>Calcular</button>
@@ -3267,6 +3268,7 @@ const SettingsMenu = () => {
                             value={cdiAnnualInput} 
                             onChange={e => setCdiAnnualInput(e.target.value)}
                             step="0.01"
+                            inputMode="decimal"
                         />
                         <p style={{fontSize: '0.8rem', color: 'var(--text-secondary-color)', textAlign: 'center', marginTop: '5px'}}>
                             Mensal: {formatPercentage(cdiMonthly)} a.m. | Anual: {cdiAnnualInput}% a.a.
@@ -3285,6 +3287,7 @@ const SettingsMenu = () => {
                             value={selicAnnualInput} 
                             onChange={e => setSelicAnnualInput(e.target.value)}
                             step="0.01"
+                            inputMode="decimal"
                         />
                         <p style={{fontSize: '0.8rem', color: 'var(--text-secondary-color)', textAlign: 'center', marginTop: '5px'}}>
                             Mensal: {formatPercentage(selicMonthly)} a.m. | Anual: {selicAnnualInput}% a.a.
@@ -3305,6 +3308,7 @@ const SettingsMenu = () => {
                             value={loanRateInput} 
                             onChange={e => setLoanRateInput(e.target.value)}
                             step="0.01"
+                            inputMode="decimal"
                         />
                     </div>
 
@@ -3320,6 +3324,7 @@ const SettingsMenu = () => {
                             value={iofRateInput} 
                             onChange={e => setIofRateInput(e.target.value)}
                             step="0.01"
+                            inputMode="decimal"
                         />
                     </div>
 
@@ -3334,6 +3339,7 @@ const SettingsMenu = () => {
                             type="text" 
                             value={tacLoanInput} 
                             onChange={handleCurrencyChange(setTacLoanInput)}
+                            inputMode="decimal"
                         />
                     </div>
 
@@ -3351,6 +3357,7 @@ const SettingsMenu = () => {
                             value={lcaPercentInput} 
                             onChange={e => setLcaPercentInput(e.target.value)}
                             step="1"
+                            inputMode="numeric"
                         />
                     </div>
 
@@ -3366,6 +3373,7 @@ const SettingsMenu = () => {
                             value={cdbPercentInput} 
                             onChange={e => setCdbPercentInput(e.target.value)}
                             step="1"
+                            inputMode="numeric"
                         />
                     </div>
 
@@ -3383,6 +3391,7 @@ const SettingsMenu = () => {
                             value={tdRateInput} 
                             onChange={e => setTdRateInput(e.target.value)}
                             step="0.01"
+                            inputMode="decimal"
                         />
                     </div>
 
@@ -3397,6 +3406,7 @@ const SettingsMenu = () => {
                             type="text" 
                             value={tacTDInput} 
                             onChange={handleCurrencyChange(setTacTDInput)}
+                            inputMode="decimal"
                         />
                     </div>
 
@@ -3612,6 +3622,7 @@ const InterestRateConverter = () => {
                             value={rateInput} 
                             onChange={e => setRateInput(e.target.value)}
                             step="0.01"
+                            inputMode="decimal"
                         />
                     </div>
 
@@ -3641,6 +3652,7 @@ const InterestRateConverter = () => {
                             type="text" 
                             value={principal} 
                             onChange={handleCurrencyChange(setPrincipal)}
+                            inputMode="decimal"
                         />
                     </div>
 
@@ -3651,6 +3663,7 @@ const InterestRateConverter = () => {
                             value={months} 
                             onChange={e => setMonths(e.target.value)}
                             min="1"
+                            inputMode="numeric"
                         />
                     </div>
 
