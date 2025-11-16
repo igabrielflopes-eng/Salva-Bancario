@@ -1286,15 +1286,83 @@ const exportToPDF = (simulationType, data) => {
     toast.success('PDF exportado com sucesso!');
 };
 
-// --- API HOOK ---
+// --- SETTINGS & HOOKS ---
+
+// Utility functions for rate conversions
+const monthlyToAnnual = (monthlyRate) => {
+    return Math.pow(1 + monthlyRate, 12) - 1;
+};
+
+const annualToMonthly = (annualRate) => {
+    return Math.pow(1 + annualRate, 1/12) - 1;
+};
+
+const DEFAULT_SETTINGS = {
+    cdiAnnual: 0.1490, // 14.90%
+    selicAnnual: 0.1500, // 15.00%
+    loanRate: 0.025, // 2.5% a.m.
+    iofRate: 0.0038, // 0.38%
+    tacLoan: 0, // R$ 0,00
+    lcaPercentCDI: 0.95, // 95% do CDI
+    cdbPercentCDI: 1.10, // 110% do CDI
+    tdRate: 0.020, // 2.0% a.m.
+    tacTD: 150, // R$ 150,00
+    lastUpdated: new Date().toISOString()
+};
+
+const useSettings = () => {
+    const [settings, setSettingsState] = useState(() => {
+        const saved = localStorage.getItem('appSettings');
+        return saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
+    });
+
+    const updateSettings = (newSettings) => {
+        const updated = {
+            ...newSettings,
+            lastUpdated: new Date().toISOString()
+        };
+        setSettingsState(updated);
+        localStorage.setItem('appSettings', JSON.stringify(updated));
+        toast.success('Configurações salvas com sucesso!');
+    };
+
+    const resetToDefaults = () => {
+        const defaults = {
+            ...DEFAULT_SETTINGS,
+            lastUpdated: new Date().toISOString()
+        };
+        setSettingsState(defaults);
+        localStorage.setItem('appSettings', JSON.stringify(defaults));
+        toast.success('Configurações restauradas para os valores padrão!');
+    };
+
+    // Calculate derived values
+    const cdiMonthly = annualToMonthly(settings.cdiAnnual);
+    const selicMonthly = annualToMonthly(settings.selicAnnual);
+
+    return {
+        settings,
+        updateSettings,
+        resetToDefaults,
+        cdiMonthly,
+        selicMonthly,
+        cdiAnnual: settings.cdiAnnual,
+        selicAnnual: settings.selicAnnual
+    };
+};
+
 const useCDI = () => {
-    // Fixed monthly CDI rate of 1.28% as requested.
-    // Annual CDI: 14.90%, Selic: 15.00% are for reference but not directly used in monthly calculations.
-    const cdiRate = 0.0128; // 1.28%
+    const { cdiMonthly, cdiAnnual } = useSettings();
     const loading = false;
     const error = null;
 
-    return { cdiRate, loading, error };
+    return { 
+        cdiRate: cdiMonthly,
+        cdiMonthly,
+        cdiAnnual,
+        loading, 
+        error 
+    };
 };
 
 
@@ -3083,6 +3151,235 @@ const ComparisonTool = ({ history, onClose }) => {
 };
 
 
+const SettingsMenu = () => {
+    const { settings, updateSettings, resetToDefaults } = useSettings();
+    
+    const [cdiAnnualInput, setCdiAnnualInput] = useState((settings.cdiAnnual * 100).toFixed(2));
+    const [selicAnnualInput, setSelicAnnualInput] = useState((settings.selicAnnual * 100).toFixed(2));
+    const [loanRateInput, setLoanRateInput] = useState((settings.loanRate * 100).toFixed(2));
+    const [iofRateInput, setIofRateInput] = useState((settings.iofRate * 100).toFixed(2));
+    const [tacLoanInput, setTacLoanInput] = useState(formatCurrency(settings.tacLoan));
+    const [lcaPercentInput, setLcaPercentInput] = useState((settings.lcaPercentCDI * 100).toFixed(0));
+    const [cdbPercentInput, setCdbPercentInput] = useState((settings.cdbPercentCDI * 100).toFixed(0));
+    const [tdRateInput, setTdRateInput] = useState((settings.tdRate * 100).toFixed(2));
+    const [tacTDInput, setTacTDInput] = useState(formatCurrency(settings.tacTD));
+
+    // Calculate monthly rates for display
+    const cdiMonthly = annualToMonthly(parseFloat(cdiAnnualInput) / 100);
+    const selicMonthly = annualToMonthly(parseFloat(selicAnnualInput) / 100);
+
+    const handleSave = () => {
+        const newSettings = {
+            cdiAnnual: parseFloat(cdiAnnualInput) / 100,
+            selicAnnual: parseFloat(selicAnnualInput) / 100,
+            loanRate: parseFloat(loanRateInput) / 100,
+            iofRate: parseFloat(iofRateInput) / 100,
+            tacLoan: parseCurrency(tacLoanInput),
+            lcaPercentCDI: parseFloat(lcaPercentInput) / 100,
+            cdbPercentCDI: parseFloat(cdbPercentInput) / 100,
+            tdRate: parseFloat(tdRateInput) / 100,
+            tacTD: parseCurrency(tacTDInput)
+        };
+        updateSettings(newSettings);
+    };
+
+    const handleReset = () => {
+        if (confirm('Tem certeza que deseja restaurar todas as configurações para os valores padrão?')) {
+            resetToDefaults();
+            setCdiAnnualInput((DEFAULT_SETTINGS.cdiAnnual * 100).toFixed(2));
+            setSelicAnnualInput((DEFAULT_SETTINGS.selicAnnual * 100).toFixed(2));
+            setLoanRateInput((DEFAULT_SETTINGS.loanRate * 100).toFixed(2));
+            setIofRateInput((DEFAULT_SETTINGS.iofRate * 100).toFixed(2));
+            setTacLoanInput(formatCurrency(DEFAULT_SETTINGS.tacLoan));
+            setLcaPercentInput((DEFAULT_SETTINGS.lcaPercentCDI * 100).toFixed(0));
+            setCdbPercentInput((DEFAULT_SETTINGS.cdbPercentCDI * 100).toFixed(0));
+            setTdRateInput((DEFAULT_SETTINGS.tdRate * 100).toFixed(2));
+            setTacTDInput(formatCurrency(DEFAULT_SETTINGS.tacTD));
+        }
+    };
+
+    return (
+        <div className="calculator-container">
+            <div className="calculator-layout">
+                <div className="form-section">
+                    <h3>⚙️ Definições do Aplicativo</h3>
+                    
+                    <h4 style={{marginTop: '20px', marginBottom: '10px', color: 'var(--primary-color)'}}>📊 Taxas de Mercado</h4>
+                    
+                    <div className="form-group">
+                        <label>
+                            CDI Anual (%)
+                            <Tooltip text="Taxa básica de juros interbancários. Usado como referência para investimentos e empréstimos pós-fixados.">
+                                <span className="tooltip-icon">?</span>
+                            </Tooltip>
+                        </label>
+                        <input 
+                            type="number" 
+                            value={cdiAnnualInput} 
+                            onChange={e => setCdiAnnualInput(e.target.value)}
+                            step="0.01"
+                        />
+                        <p style={{fontSize: '0.8rem', color: 'var(--text-secondary-color)', textAlign: 'center', marginTop: '5px'}}>
+                            Mensal: {formatPercentage(cdiMonthly)} a.m. | Anual: {cdiAnnualInput}% a.a.
+                        </p>
+                    </div>
+
+                    <div className="form-group">
+                        <label>
+                            SELIC Anual (%)
+                            <Tooltip text="Taxa básica de juros da economia brasileira, definida pelo Banco Central.">
+                                <span className="tooltip-icon">?</span>
+                            </Tooltip>
+                        </label>
+                        <input 
+                            type="number" 
+                            value={selicAnnualInput} 
+                            onChange={e => setSelicAnnualInput(e.target.value)}
+                            step="0.01"
+                        />
+                        <p style={{fontSize: '0.8rem', color: 'var(--text-secondary-color)', textAlign: 'center', marginTop: '5px'}}>
+                            Mensal: {formatPercentage(selicMonthly)} a.m. | Anual: {selicAnnualInput}% a.a.
+                        </p>
+                    </div>
+
+                    <h4 style={{marginTop: '20px', marginBottom: '10px', color: 'var(--primary-color)'}}>💸 Empréstimos</h4>
+                    
+                    <div className="form-group">
+                        <label>
+                            Taxa Padrão Mensal (%)
+                            <Tooltip text="Taxa de juros padrão pré-preenchida nos simuladores de empréstimo.">
+                                <span className="tooltip-icon">?</span>
+                            </Tooltip>
+                        </label>
+                        <input 
+                            type="number" 
+                            value={loanRateInput} 
+                            onChange={e => setLoanRateInput(e.target.value)}
+                            step="0.01"
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label>
+                            IOF Padrão (%)
+                            <Tooltip text="Imposto sobre Operações Financeiras. Taxa típica: 0,38%.">
+                                <span className="tooltip-icon">?</span>
+                            </Tooltip>
+                        </label>
+                        <input 
+                            type="number" 
+                            value={iofRateInput} 
+                            onChange={e => setIofRateInput(e.target.value)}
+                            step="0.01"
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label>
+                            TAC Padrão (R$)
+                            <Tooltip text="Taxa de Abertura de Crédito cobrada no início do empréstimo.">
+                                <span className="tooltip-icon">?</span>
+                            </Tooltip>
+                        </label>
+                        <input 
+                            type="text" 
+                            value={tacLoanInput} 
+                            onChange={handleCurrencyChange(setTacLoanInput)}
+                        />
+                    </div>
+
+                    <h4 style={{marginTop: '20px', marginBottom: '10px', color: 'var(--primary-color)'}}>📈 Investimentos</h4>
+                    
+                    <div className="form-group">
+                        <label>
+                            % CDI para LCA/LCI
+                            <Tooltip text="Percentual do CDI que LCA/LCI costuma render. Típico: 90-100%.">
+                                <span className="tooltip-icon">?</span>
+                            </Tooltip>
+                        </label>
+                        <input 
+                            type="number" 
+                            value={lcaPercentInput} 
+                            onChange={e => setLcaPercentInput(e.target.value)}
+                            step="1"
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label>
+                            % CDI para CDB/RDC
+                            <Tooltip text="Percentual do CDI que CDB/RDC costuma render. Típico: 100-120%.">
+                                <span className="tooltip-icon">?</span>
+                            </Tooltip>
+                        </label>
+                        <input 
+                            type="number" 
+                            value={cdbPercentInput} 
+                            onChange={e => setCdbPercentInput(e.target.value)}
+                            step="1"
+                        />
+                    </div>
+
+                    <h4 style={{marginTop: '20px', marginBottom: '10px', color: 'var(--primary-color)'}}>📝 Desconto de Recebíveis</h4>
+                    
+                    <div className="form-group">
+                        <label>
+                            Taxa TD Padrão Mensal (%)
+                            <Tooltip text="Taxa de desconto padrão para antecipação de recebíveis.">
+                                <span className="tooltip-icon">?</span>
+                            </Tooltip>
+                        </label>
+                        <input 
+                            type="number" 
+                            value={tdRateInput} 
+                            onChange={e => setTdRateInput(e.target.value)}
+                            step="0.01"
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label>
+                            TAC TD Padrão (R$)
+                            <Tooltip text="Taxa de abertura de crédito padrão para desconto de recebíveis.">
+                                <span className="tooltip-icon">?</span>
+                            </Tooltip>
+                        </label>
+                        <input 
+                            type="text" 
+                            value={tacTDInput} 
+                            onChange={handleCurrencyChange(setTacTDInput)}
+                        />
+                    </div>
+
+                    <div style={{marginTop: '20px', padding: '10px', backgroundColor: 'var(--background-secondary)', borderRadius: '5px', fontSize: '0.85rem', color: 'var(--text-secondary-color)'}}>
+                        <strong>Última atualização:</strong> {new Date(settings.lastUpdated).toLocaleString('pt-BR')}
+                    </div>
+
+                    <div className="btn-group" style={{marginTop: '20px'}}>
+                        <button className="btn" onClick={handleSave}>💾 Salvar Configurações</button>
+                        <button className="btn btn-secondary" onClick={handleReset}>🔄 Restaurar Padrões</button>
+                    </div>
+                </div>
+
+                <div className="results-section">
+                    <h3>ℹ️ Informações</h3>
+                    <div className="no-results">
+                        <div className="icon">⚙️</div>
+                        <h3>Configurações Globais</h3>
+                        <p style={{textAlign: 'center', lineHeight: '1.6'}}>
+                            Estas configurações definem os valores padrão para todos os simuladores do aplicativo.
+                            <br/><br/>
+                            Ao alterar e salvar, os novos valores serão automaticamente pré-preenchidos em todos os calculadores.
+                            <br/><br/>
+                            <strong>Dica:</strong> Use o botão "Restaurar Padrões" para voltar aos valores originais do sistema.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const MainMenu = ({ setView }) => {
     return (
         <>
@@ -3100,6 +3397,8 @@ const MainMenu = ({ setView }) => {
                 <FeatureCard icon="🗓️" title="Aplicação Programada" description="Simule o acúmulo de patrimônio com aportes mensais." onClick={() => setView('scheduledApplication')} />
                 <FeatureCard icon="🗂️" title="Histórico" description="Veja e compare suas simulações salvas." onClick={() => setView('history')} />
                 <FeatureCard icon="🔍" title="Comparador" description="Compare lado a lado duas simulações salvas." onClick={() => setView('comparison')} />
+                <FeatureCard icon="⚙️" title="Definições" description="Configure valores padrão do aplicativo." onClick={() => setView('settings')} />
+                <FeatureCard icon="🔄" title="Conversão de Taxas" description="Converta taxas e compare juros compostos vs simples." onClick={() => setView('rateConverter')} />
             </div>
         </>
     );
