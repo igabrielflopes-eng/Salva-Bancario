@@ -4460,8 +4460,6 @@ const InterestRateConverter = () => {
     const [rateInput, setRateInput] = useState('2.00');
     const [fromPeriod, setFromPeriod] = useState('month');
     const [toPeriod, setToPeriod] = useState('year');
-    const [principal, setPrincipal] = useState('R$ 10.000,00');
-    const [months, setMonths] = useState('12');
     const [showFormulas, setShowFormulas] = useState(false);
     const [results, setResults] = useState(null);
 
@@ -4479,11 +4477,9 @@ const InterestRateConverter = () => {
 
     const calculate = () => {
         const rate = parseFloat(rateInput) / 100;
-        const principalValue = parseCurrency(principal);
-        const numMonths = parseInt(months, 10);
 
-        if (!rate || !principalValue || !numMonths) {
-            toast.error('Preencha todos os campos corretamente.');
+        if (!rate || rate <= 0) {
+            toast.error('Preencha uma taxa válida.');
             return;
         }
 
@@ -4497,41 +4493,15 @@ const InterestRateConverter = () => {
         const monthlyCompound = Math.pow(1 + dailyCompound, 30) - 1;
         const yearlyCompound = Math.pow(1 + dailyCompound, 360) - 1;
 
-        const compoundFinal = principalValue * Math.pow(1 + monthlyCompound, numMonths);
-        const compoundInterest = compoundFinal - principalValue;
-
-        const simpleInterest = principalValue * (monthlyCompound * numMonths);
-        const simpleFinal = principalValue + simpleInterest;
-
-        const evolutionData = [];
-        for (let i = 0; i <= numMonths; i++) {
-            const compoundValue = principalValue * Math.pow(1 + monthlyCompound, i);
-            const simpleValue = principalValue * (1 + monthlyCompound * i);
-            evolutionData.push({
-                month: i,
-                composto: compoundValue,
-                simples: simpleValue,
-                diferenca: compoundValue - simpleValue
-            });
-        }
-
         setResults({
             convertedCompound,
             convertedSimple,
             dailyCompound,
             monthlyCompound,
-            yearlyCompound,
-            compoundFinal,
-            compoundInterest,
-            simpleFinal,
-            simpleInterest,
-            difference: compoundInterest - simpleInterest,
-            evolutionData,
-            principalValue,
-            numMonths
+            yearlyCompound
         });
 
-        toast.success('Cálculo realizado com sucesso!');
+        toast.success('Conversão realizada com sucesso!');
     };
 
     const exportToPDF = () => {
@@ -4552,20 +4522,15 @@ const InterestRateConverter = () => {
 
             const summary = [
                 { label: 'Taxa Original', value: `${rateInput}% ${periodOptions.find(p => p.value === fromPeriod)?.label || ''}` },
-                { label: 'Taxa Convertida (Composta)', value: `${formatPercentage(results.convertedCompound)} ${periodOptions.find(p => p.value === toPeriod)?.label || ''}` },
-                { label: 'Taxa Convertida (Simples)', value: `${formatPercentage(results.convertedSimple)} ${periodOptions.find(p => p.value === toPeriod)?.label || ''}` },
                 { label: '', value: '' },
-                { label: 'Taxa Diária', value: formatPercentage(results.dailyCompound) + ' a.d.' },
-                { label: 'Taxa Mensal', value: formatPercentage(results.monthlyCompound) + ' a.m.' },
-                { label: 'Taxa Anual', value: formatPercentage(results.yearlyCompound) + ' a.a.' },
+                { label: 'Conversão para ' + periodOptions.find(p => p.value === toPeriod)?.label, value: '' },
+                { label: '  Taxa Composta', value: `${formatPercentage(results.convertedCompound)}` },
+                { label: '  Taxa Simples', value: `${formatPercentage(results.convertedSimple)}` },
                 { label: '', value: '' },
-                { label: 'Principal', value: formatCurrency(results.principalValue) },
-                { label: 'Prazo', value: `${results.numMonths} meses` },
-                { label: 'Montante Final (Composto)', value: formatCurrency(results.compoundFinal) },
-                { label: 'Juros Compostos', value: formatCurrency(results.compoundInterest) },
-                { label: 'Montante Final (Simples)', value: formatCurrency(results.simpleFinal) },
-                { label: 'Juros Simples', value: formatCurrency(results.simpleInterest) },
-                { label: 'Diferença', value: formatCurrency(results.difference) }
+                { label: 'Taxas Equivalentes', value: '' },
+                { label: '  Taxa Diária', value: formatPercentage(results.dailyCompound) + ' a.d.' },
+                { label: '  Taxa Mensal', value: formatPercentage(results.monthlyCompound) + ' a.m.' },
+                { label: '  Taxa Anual', value: formatPercentage(results.yearlyCompound) + ' a.a.' }
             ];
 
             console.log('[PDF Export] Adicionando resumo...');
@@ -4580,31 +4545,12 @@ const InterestRateConverter = () => {
                 }
             });
 
-            if (results.evolutionData.length <= 50) {
-                console.log('[PDF Export] Adicionando tabela...');
-                autoTable(doc, {
-                    startY: yPos + 5,
-                    head: [['Mês', 'Composto', 'Simples', 'Diferença']],
-                    body: results.evolutionData.map(row => [
-                        row.month,
-                        formatCurrency(row.composto),
-                        formatCurrency(row.simples),
-                        formatCurrency(row.diferenca)
-                    ]),
-                    theme: 'grid',
-                    headStyles: { fillColor: [0, 90, 156] },
-                    styles: { fontSize: 8 }
-                });
-            }
-
             console.log('[PDF Export] Salvando arquivo...');
             
-            // Solução para iframe/Replit: usar blob + window.open
             const blob = doc.output('blob');
             const url = URL.createObjectURL(blob);
             const newWindow = window.open(url, '_blank');
             
-            // Fallback se popup blocker ativar
             if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
                 console.log('[PDF Export] Popup bloqueado, usando link de download...');
                 const link = document.createElement('a');
@@ -4615,7 +4561,6 @@ const InterestRateConverter = () => {
                 document.body.removeChild(link);
             }
             
-            // Liberar memória após um pequeno delay (tanto para sucesso quanto fallback)
             setTimeout(() => URL.revokeObjectURL(url), 1000);
             
             console.log('[PDF Export] PDF exportado com sucesso!');
@@ -4630,21 +4575,32 @@ const InterestRateConverter = () => {
         <div className="calculator-container">
             <div className="calculator-layout">
                 <div className="form-section">
-                    <h3>🔄 Conversão de Taxas de Juros</h3>
+                    <h3>🔄 Capitalização e Descapitalização de Taxas</h3>
 
                     <div className="form-group">
-                        <label>Taxa de Juros (%)</label>
+                        <label>
+                            Taxa de Juros (%)
+                            <Tooltip text="Informe a taxa percentual que deseja converter.">
+                                <span className="tooltip-icon">?</span>
+                            </Tooltip>
+                        </label>
                         <input 
                             type="number" 
                             value={rateInput} 
                             onChange={e => setRateInput(e.target.value)}
                             step="0.01"
                             inputMode="decimal"
+                            placeholder="Ex: 2.00"
                         />
                     </div>
 
                     <div className="form-group">
-                        <label>Período Origem</label>
+                        <label>
+                            Período Origem
+                            <Tooltip text="Período em que a taxa está expressa atualmente.">
+                                <span className="tooltip-icon">?</span>
+                            </Tooltip>
+                        </label>
                         <select value={fromPeriod} onChange={e => setFromPeriod(e.target.value)}>
                             {periodOptions.map(opt => (
                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -4653,7 +4609,12 @@ const InterestRateConverter = () => {
                     </div>
 
                     <div className="form-group">
-                        <label>Período Destino</label>
+                        <label>
+                            Período Destino
+                            <Tooltip text="Período para o qual deseja converter a taxa.">
+                                <span className="tooltip-icon">?</span>
+                            </Tooltip>
+                        </label>
                         <select value={toPeriod} onChange={e => setToPeriod(e.target.value)}>
                             {periodOptions.map(opt => (
                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -4661,30 +4622,7 @@ const InterestRateConverter = () => {
                         </select>
                     </div>
 
-                    <h4 style={{marginTop: '20px', marginBottom: '10px', color: 'var(--primary-color)'}}>📊 Comparação Composto vs Simples</h4>
-
-                    <div className="form-group">
-                        <label>Valor Principal (R$)</label>
-                        <input 
-                            type="text" 
-                            value={principal} 
-                            onChange={handleCurrencyChange(setPrincipal)}
-                            inputMode="decimal"
-                        />
-                    </div>
-
-                    <div className="form-group">
-                        <label>Prazo (meses)</label>
-                        <input 
-                            type="number" 
-                            value={months} 
-                            onChange={e => setMonths(e.target.value)}
-                            min="1"
-                            inputMode="numeric"
-                        />
-                    </div>
-
-                    <button className="btn" onClick={calculate}>🔍 Calcular</button>
+                    <button className="btn" onClick={calculate}>🔍 Converter Taxa</button>
 
                     {results && (
                         <div style={{marginTop: '20px'}}>
@@ -4708,48 +4646,56 @@ const InterestRateConverter = () => {
                             lineHeight: '1.8'
                         }}>
                             <h4 style={{marginTop: 0, color: 'var(--primary-color)'}}>📐 Fórmulas Utilizadas</h4>
-                            <p><strong>Juros Compostos:</strong><br/>
-                            M = C × (1 + i)^n<br/>
-                            J = M - C</p>
-                            <p><strong>Juros Simples:</strong><br/>
-                            J = C × i × n<br/>
-                            M = C + J</p>
-                            <p><strong>Conversão de Taxa (Composta):</strong><br/>
-                            i_convertida = (1 + i_original)^(dias_origem/dias_destino) - 1</p>
-                            <p><strong>Conversão de Taxa (Simples):</strong><br/>
-                            i_convertida = (i_original × dias_origem) / dias_destino</p>
+                            
+                            <p><strong>Capitalização/Descapitalização (Composta):</strong><br/>
+                            i_convertida = (1 + i)^(n₁/n₂) - 1</p>
+                            
+                            <p><strong>Conversão Linear (Simples):</strong><br/>
+                            i_convertida = (i × n₁) / n₂</p>
+                            
+                            <p><strong>Taxas Equivalentes:</strong><br/>
+                            i_diária = (1 + i_origem)^(1/dias_origem) - 1<br/>
+                            i_mensal = (1 + i_diária)^30 - 1<br/>
+                            i_anual = (1 + i_diária)^360 - 1</p>
+                            
                             <p style={{fontSize: '0.75rem', color: 'var(--text-secondary-color)', marginBottom: 0}}>
-                            Onde: M = Montante, C = Capital, i = Taxa, n = Tempo
+                            Onde: i = Taxa, n₁ = Dias período origem, n₂ = Dias período destino
                             </p>
                         </div>
                     )}
+
+                    <div style={{marginTop: '20px', padding: '15px', backgroundColor: 'var(--bg-color)', borderRadius: '8px', border: '1px solid var(--border-color)'}}>
+                        <p style={{fontSize: '0.85rem', color: 'var(--text-secondary-color)', margin: '0'}}>
+                            💡 <strong>Dica:</strong> Use <strong>capitalização</strong> para converter de períodos menores para maiores (ex: mensal → anual). Use <strong>descapitalização</strong> para o contrário (ex: anual → mensal).
+                        </p>
+                    </div>
                 </div>
 
                 <div className="results-section">
                     {!results ? (
-                        <NoResults message="Preencha os campos e clique em 'Calcular' para ver os resultados." />
+                        <NoResults message="Preencha os campos e clique em 'Converter Taxa' para ver os resultados." />
                     ) : (
                         <>
-                            <h3>📊 Resultados</h3>
+                            <h3>📊 Resultados da Conversão</h3>
 
                             <div className="result-card">
-                                <h4>🔄 Conversão de Taxa</h4>
+                                <h4>🔄 Taxa Convertida</h4>
                                 <div className="result-item">
                                     <span className="label">Taxa Original:</span>
                                     <span className="value">{rateInput}% {periodOptions.find(p => p.value === fromPeriod)?.label || ''}</span>
                                 </div>
                                 <div className="result-item">
-                                    <span className="label">Taxa Convertida (Composta):</span>
+                                    <span className="label">Conversão Composta:</span>
                                     <span className="value highlight">{formatPercentage(results.convertedCompound)} {periodOptions.find(p => p.value === toPeriod)?.label || ''}</span>
                                 </div>
                                 <div className="result-item">
-                                    <span className="label">Taxa Convertida (Simples):</span>
+                                    <span className="label">Conversão Linear (Simples):</span>
                                     <span className="value">{formatPercentage(results.convertedSimple)} {periodOptions.find(p => p.value === toPeriod)?.label || ''}</span>
                                 </div>
                             </div>
 
                             <div className="result-card">
-                                <h4>📈 Taxas Equivalentes</h4>
+                                <h4>📈 Taxas Equivalentes (Juros Compostos)</h4>
                                 <div className="result-item">
                                     <span className="label">Taxa Diária:</span>
                                     <span className="value">{formatPercentage(results.dailyCompound)} a.d.</span>
@@ -4764,96 +4710,19 @@ const InterestRateConverter = () => {
                                 </div>
                             </div>
 
-                            <div className="result-card">
-                                <h4>💰 Comparação ({results.numMonths} meses)</h4>
-                                <div className="result-item">
-                                    <span className="label">Principal:</span>
-                                    <span className="value">{formatCurrency(results.principalValue)}</span>
-                                </div>
-                                <div className="result-item">
-                                    <span className="label">Montante Final (Composto):</span>
-                                    <span className="value highlight">{formatCurrency(results.compoundFinal)}</span>
-                                </div>
-                                <div className="result-item">
-                                    <span className="label">Juros Compostos:</span>
-                                    <span className="value">{formatCurrency(results.compoundInterest)}</span>
-                                </div>
-                                <div className="result-item">
-                                    <span className="label">Montante Final (Simples):</span>
-                                    <span className="value">{formatCurrency(results.simpleFinal)}</span>
-                                </div>
-                                <div className="result-item">
-                                    <span className="label">Juros Simples:</span>
-                                    <span className="value">{formatCurrency(results.simpleInterest)}</span>
-                                </div>
-                                <div className="result-item">
-                                    <span className="label">Diferença (Composto - Simples):</span>
-                                    <span className="value" style={{color: 'var(--success-color)', fontWeight: 600}}>
-                                        {formatCurrency(results.difference)}
-                                    </span>
-                                </div>
+                            <div className="result-card" style={{backgroundColor: 'var(--bg-color)', border: '1px solid var(--border-color)'}}>
+                                <h4>ℹ️ Informações Importantes</h4>
+                                <p style={{fontSize: '0.85rem', margin: '0', lineHeight: '1.6', color: 'var(--text-secondary-color)'}}>
+                                    <strong>Conversão Composta:</strong> Considera o efeito de capitalização exponencial (juros sobre juros). Mais precisa para operações financeiras reais.
+                                    <br/><br/>
+                                    <strong>Conversão Linear:</strong> Utiliza proporcionalidade simples. Aproximação mais básica, sem considerar capitalização.
+                                    <br/><br/>
+                                    <strong>Taxas Equivalentes:</strong> Representam a mesma rentabilidade em períodos diferentes usando capitalização composta.
+                                </p>
                             </div>
 
                             <div className="btn-group" style={{marginTop: '20px'}}>
                                 <button className="btn" onClick={exportToPDF}>📄 Exportar PDF</button>
-                            </div>
-
-                            {results.evolutionData.length <= 60 && (
-                                <div className="table-container" style={{marginTop: '30px'}}>
-                                    <h4>📋 Evolução Comparativa</h4>
-                                    <table className="data-table responsive-table">
-                                        <thead>
-                                            <tr>
-                                                <th>Mês</th>
-                                                <th>Composto</th>
-                                                <th>Simples</th>
-                                                <th>Diferença</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {results.evolutionData.map((row, idx) => (
-                                                <tr key={idx}>
-                                                    <td data-label="Mês">{row.month}</td>
-                                                    <td data-label="Composto">{formatCurrency(row.composto)}</td>
-                                                    <td data-label="Simples">{formatCurrency(row.simples)}</td>
-                                                    <td data-label="Diferença" style={{color: row.diferenca > 0 ? 'var(--success-color)' : 'inherit'}}>
-                                                        {formatCurrency(row.diferenca)}
-                                                    </td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            )}
-
-                            <div style={{marginTop: '30px'}}>
-                                <h4>📈 Gráfico de Evolução</h4>
-                                <ResponsiveContainer width="100%" height={300}>
-                                    <LineChart data={results.evolutionData}>
-                                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
-                                        <XAxis 
-                                            dataKey="month" 
-                                            stroke="var(--text-secondary-color)"
-                                            label={{ value: 'Mês', position: 'insideBottom', offset: -5, fill: 'var(--text-color)' }}
-                                        />
-                                        <YAxis 
-                                            stroke="var(--text-secondary-color)"
-                                            label={{ value: 'Montante (R$)', angle: -90, position: 'insideLeft', fill: 'var(--text-color)' }}
-                                            tickFormatter={val => formatCurrency(val)}
-                                        />
-                                        <ChartTooltip 
-                                            contentStyle={{
-                                                backgroundColor: 'var(--card-bg)',
-                                                border: '1px solid var(--border-color)',
-                                                borderRadius: '5px'
-                                            }}
-                                            formatter={val => formatCurrency(val)}
-                                        />
-                                        <Legend />
-                                        <Line type="monotone" dataKey="composto" stroke="#005a9c" strokeWidth={2} name="Juros Compostos" />
-                                        <Line type="monotone" dataKey="simples" stroke="#ff6b6b" strokeWidth={2} name="Juros Simples" />
-                                    </LineChart>
-                                </ResponsiveContainer>
                             </div>
                         </>
                     )}
@@ -5049,7 +4918,7 @@ const MainMenu = ({ setView }) => {
                 <FeatureCard icon="💸" title="Empréstimo Prefixado" description="Calcule empréstimos com taxas de juros fixas." onClick={() => setView('loanPre')} />
                 <FeatureCard icon="📈" title="Empréstimo Pós-fixado" description="Simule empréstimos atrelados ao CDI." onClick={() => setView('loanPost')} />
                 <FeatureCard icon="🏦" title="Taxa do Concorrente" description="Descubra a taxa de juros de um empréstimo." onClick={() => setView('competitorRate')} />
-                <FeatureCard icon="🔄" title="Conversão de Taxas" description="Converta taxas e compare juros compostos vs simples." onClick={() => setView('rateConverter')} />
+                <FeatureCard icon="🔄" title="Conversão de Taxas" description="Capitalize e descapitalize taxas entre diferentes períodos." onClick={() => setView('rateConverter')} />
                 <FeatureCard icon="🔍" title="Comparador" description="Compare lado a lado duas simulações salvas." onClick={() => setView('comparison')} />
                 <FeatureCard icon="🗂️" title="Histórico" description="Veja e compare suas simulações salvas." onClick={() => setView('history')} />
                 <FeatureCard icon="⚙️" title="Definições" description="Configure valores padrão do aplicativo." onClick={() => setView('settings')} />
