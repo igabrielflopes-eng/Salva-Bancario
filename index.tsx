@@ -3380,6 +3380,378 @@ const SettingsMenu = () => {
     );
 };
 
+const InterestRateConverter = () => {
+    const [rateInput, setRateInput] = useState('2.00');
+    const [fromPeriod, setFromPeriod] = useState('month');
+    const [toPeriod, setToPeriod] = useState('year');
+    const [principal, setPrincipal] = useState('R$ 10.000,00');
+    const [months, setMonths] = useState('12');
+    const [showFormulas, setShowFormulas] = useState(false);
+    const [results, setResults] = useState(null);
+
+    const periodOptions = [
+        { value: 'day', label: 'Dia (a.d.)' },
+        { value: 'month', label: 'Mês (a.m.)' },
+        { value: 'year', label: 'Ano (a.a.)' }
+    ];
+
+    const periodFactors = {
+        day: 1,
+        month: 30,
+        year: 360
+    };
+
+    const calculate = () => {
+        const rate = parseFloat(rateInput) / 100;
+        const principalValue = parseCurrency(principal);
+        const numMonths = parseInt(months, 10);
+
+        if (!rate || !principalValue || !numMonths) {
+            toast.error('Preencha todos os campos corretamente.');
+            return;
+        }
+
+        const fromDays = periodFactors[fromPeriod];
+        const toDays = periodFactors[toPeriod];
+
+        const convertedCompound = Math.pow(1 + rate, fromDays / toDays) - 1;
+        const convertedSimple = (rate * fromDays) / toDays;
+
+        const dailyCompound = fromPeriod === 'day' ? rate : Math.pow(1 + rate, 1 / fromDays) - 1;
+        const monthlyCompound = Math.pow(1 + dailyCompound, 30) - 1;
+        const yearlyCompound = Math.pow(1 + dailyCompound, 360) - 1;
+
+        const compoundFinal = principalValue * Math.pow(1 + monthlyCompound, numMonths);
+        const compoundInterest = compoundFinal - principalValue;
+
+        const simpleInterest = principalValue * (monthlyCompound * numMonths);
+        const simpleFinal = principalValue + simpleInterest;
+
+        const evolutionData = [];
+        for (let i = 0; i <= numMonths; i++) {
+            const compoundValue = principalValue * Math.pow(1 + monthlyCompound, i);
+            const simpleValue = principalValue * (1 + monthlyCompound * i);
+            evolutionData.push({
+                month: i,
+                composto: compoundValue,
+                simples: simpleValue,
+                diferenca: compoundValue - simpleValue
+            });
+        }
+
+        setResults({
+            convertedCompound,
+            convertedSimple,
+            dailyCompound,
+            monthlyCompound,
+            yearlyCompound,
+            compoundFinal,
+            compoundInterest,
+            simpleFinal,
+            simpleInterest,
+            difference: compoundInterest - simpleInterest,
+            evolutionData,
+            principalValue,
+            numMonths
+        });
+
+        toast.success('Cálculo realizado com sucesso!');
+    };
+
+    const exportToPDF = () => {
+        if (!results) {
+            toast.error('Realize o cálculo primeiro.');
+            return;
+        }
+
+        const doc = new jsPDF();
+
+        doc.setFontSize(16);
+        doc.text('Conversão de Taxas de Juros', 20, 20);
+
+        const summary = [
+            { label: 'Taxa Original', value: `${rateInput}% ${periodOptions.find(p => p.value === fromPeriod)?.label || ''}` },
+            { label: 'Taxa Convertida (Composta)', value: `${formatPercentage(results.convertedCompound)} ${periodOptions.find(p => p.value === toPeriod)?.label || ''}` },
+            { label: 'Taxa Convertida (Simples)', value: `${formatPercentage(results.convertedSimple)} ${periodOptions.find(p => p.value === toPeriod)?.label || ''}` },
+            { label: '', value: '' },
+            { label: 'Taxa Diária', value: formatPercentage(results.dailyCompound) + ' a.d.' },
+            { label: 'Taxa Mensal', value: formatPercentage(results.monthlyCompound) + ' a.m.' },
+            { label: 'Taxa Anual', value: formatPercentage(results.yearlyCompound) + ' a.a.' },
+            { label: '', value: '' },
+            { label: 'Principal', value: formatCurrency(results.principalValue) },
+            { label: 'Prazo', value: `${results.numMonths} meses` },
+            { label: 'Montante Final (Composto)', value: formatCurrency(results.compoundFinal) },
+            { label: 'Juros Compostos', value: formatCurrency(results.compoundInterest) },
+            { label: 'Montante Final (Simples)', value: formatCurrency(results.simpleFinal) },
+            { label: 'Juros Simples', value: formatCurrency(results.simpleInterest) },
+            { label: 'Diferença', value: formatCurrency(results.difference) }
+        ];
+
+        let yPos = 30;
+        doc.setFontSize(10);
+        summary.forEach(item => {
+            if (item.label === '') {
+                yPos += 3;
+            } else {
+                doc.text(`${item.label}: ${item.value}`, 20, yPos);
+                yPos += 6;
+            }
+        });
+
+        if (results.evolutionData.length <= 50) {
+            autoTable(doc, {
+                startY: yPos + 5,
+                head: [['Mês', 'Composto', 'Simples', 'Diferença']],
+                body: results.evolutionData.map(row => [
+                    row.month,
+                    formatCurrency(row.composto),
+                    formatCurrency(row.simples),
+                    formatCurrency(row.diferenca)
+                ]),
+                theme: 'grid',
+                headStyles: { fillColor: [0, 90, 156] },
+                styles: { fontSize: 8 }
+            });
+        }
+
+        doc.save(`Conversao_Taxas_${Date.now()}.pdf`);
+        toast.success('PDF exportado com sucesso!');
+    };
+
+    return (
+        <div className="calculator-container">
+            <div className="calculator-layout">
+                <div className="form-section">
+                    <h3>🔄 Conversão de Taxas de Juros</h3>
+
+                    <div className="form-group">
+                        <label>Taxa de Juros (%)</label>
+                        <input 
+                            type="number" 
+                            value={rateInput} 
+                            onChange={e => setRateInput(e.target.value)}
+                            step="0.01"
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label>Período Origem</label>
+                        <select value={fromPeriod} onChange={e => setFromPeriod(e.target.value)}>
+                            {periodOptions.map(opt => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="form-group">
+                        <label>Período Destino</label>
+                        <select value={toPeriod} onChange={e => setToPeriod(e.target.value)}>
+                            {periodOptions.map(opt => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <h4 style={{marginTop: '20px', marginBottom: '10px', color: 'var(--primary-color)'}}>📊 Comparação Composto vs Simples</h4>
+
+                    <div className="form-group">
+                        <label>Valor Principal (R$)</label>
+                        <input 
+                            type="text" 
+                            value={principal} 
+                            onChange={handleCurrencyChange(setPrincipal)}
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label>Prazo (meses)</label>
+                        <input 
+                            type="number" 
+                            value={months} 
+                            onChange={e => setMonths(e.target.value)}
+                            min="1"
+                        />
+                    </div>
+
+                    <button className="btn" onClick={calculate}>🔍 Calcular</button>
+
+                    {results && (
+                        <div style={{marginTop: '20px'}}>
+                            <button 
+                                className="btn btn-secondary" 
+                                onClick={() => setShowFormulas(!showFormulas)}
+                                style={{width: '100%'}}
+                            >
+                                {showFormulas ? '📐 Ocultar Fórmulas' : '📐 Mostrar Fórmulas'}
+                            </button>
+                        </div>
+                    )}
+
+                    {showFormulas && (
+                        <div style={{
+                            marginTop: '15px', 
+                            padding: '15px', 
+                            backgroundColor: 'var(--background-secondary)', 
+                            borderRadius: '8px',
+                            fontSize: '0.85rem',
+                            lineHeight: '1.8'
+                        }}>
+                            <h4 style={{marginTop: 0, color: 'var(--primary-color)'}}>📐 Fórmulas Utilizadas</h4>
+                            <p><strong>Juros Compostos:</strong><br/>
+                            M = C × (1 + i)^n<br/>
+                            J = M - C</p>
+                            <p><strong>Juros Simples:</strong><br/>
+                            J = C × i × n<br/>
+                            M = C + J</p>
+                            <p><strong>Conversão de Taxa (Composta):</strong><br/>
+                            i_convertida = (1 + i_original)^(dias_origem/dias_destino) - 1</p>
+                            <p><strong>Conversão de Taxa (Simples):</strong><br/>
+                            i_convertida = (i_original × dias_origem) / dias_destino</p>
+                            <p style={{fontSize: '0.75rem', color: 'var(--text-secondary-color)', marginBottom: 0}}>
+                            Onde: M = Montante, C = Capital, i = Taxa, n = Tempo
+                            </p>
+                        </div>
+                    )}
+                </div>
+
+                <div className="results-section">
+                    {!results ? (
+                        <NoResults message="Preencha os campos e clique em 'Calcular' para ver os resultados." />
+                    ) : (
+                        <>
+                            <h3>📊 Resultados</h3>
+
+                            <div className="result-card">
+                                <h4>🔄 Conversão de Taxa</h4>
+                                <div className="result-item">
+                                    <span className="label">Taxa Original:</span>
+                                    <span className="value">{rateInput}% {periodOptions.find(p => p.value === fromPeriod)?.label || ''}</span>
+                                </div>
+                                <div className="result-item">
+                                    <span className="label">Taxa Convertida (Composta):</span>
+                                    <span className="value highlight">{formatPercentage(results.convertedCompound)} {periodOptions.find(p => p.value === toPeriod)?.label || ''}</span>
+                                </div>
+                                <div className="result-item">
+                                    <span className="label">Taxa Convertida (Simples):</span>
+                                    <span className="value">{formatPercentage(results.convertedSimple)} {periodOptions.find(p => p.value === toPeriod)?.label || ''}</span>
+                                </div>
+                            </div>
+
+                            <div className="result-card">
+                                <h4>📈 Taxas Equivalentes</h4>
+                                <div className="result-item">
+                                    <span className="label">Taxa Diária:</span>
+                                    <span className="value">{formatPercentage(results.dailyCompound)} a.d.</span>
+                                </div>
+                                <div className="result-item">
+                                    <span className="label">Taxa Mensal:</span>
+                                    <span className="value">{formatPercentage(results.monthlyCompound)} a.m.</span>
+                                </div>
+                                <div className="result-item">
+                                    <span className="label">Taxa Anual:</span>
+                                    <span className="value">{formatPercentage(results.yearlyCompound)} a.a.</span>
+                                </div>
+                            </div>
+
+                            <div className="result-card">
+                                <h4>💰 Comparação ({results.numMonths} meses)</h4>
+                                <div className="result-item">
+                                    <span className="label">Principal:</span>
+                                    <span className="value">{formatCurrency(results.principalValue)}</span>
+                                </div>
+                                <div className="result-item">
+                                    <span className="label">Montante Final (Composto):</span>
+                                    <span className="value highlight">{formatCurrency(results.compoundFinal)}</span>
+                                </div>
+                                <div className="result-item">
+                                    <span className="label">Juros Compostos:</span>
+                                    <span className="value">{formatCurrency(results.compoundInterest)}</span>
+                                </div>
+                                <div className="result-item">
+                                    <span className="label">Montante Final (Simples):</span>
+                                    <span className="value">{formatCurrency(results.simpleFinal)}</span>
+                                </div>
+                                <div className="result-item">
+                                    <span className="label">Juros Simples:</span>
+                                    <span className="value">{formatCurrency(results.simpleInterest)}</span>
+                                </div>
+                                <div className="result-item">
+                                    <span className="label">Diferença (Composto - Simples):</span>
+                                    <span className="value" style={{color: 'var(--success-color)', fontWeight: 600}}>
+                                        {formatCurrency(results.difference)}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="btn-group" style={{marginTop: '20px'}}>
+                                <button className="btn" onClick={exportToPDF}>📄 Exportar PDF</button>
+                            </div>
+
+                            {results.evolutionData.length <= 60 && (
+                                <div className="table-container" style={{marginTop: '30px'}}>
+                                    <h4>📋 Evolução Comparativa</h4>
+                                    <table className="data-table responsive-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Mês</th>
+                                                <th>Composto</th>
+                                                <th>Simples</th>
+                                                <th>Diferença</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {results.evolutionData.map((row, idx) => (
+                                                <tr key={idx}>
+                                                    <td data-label="Mês">{row.month}</td>
+                                                    <td data-label="Composto">{formatCurrency(row.composto)}</td>
+                                                    <td data-label="Simples">{formatCurrency(row.simples)}</td>
+                                                    <td data-label="Diferença" style={{color: row.diferenca > 0 ? 'var(--success-color)' : 'inherit'}}>
+                                                        {formatCurrency(row.diferenca)}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+
+                            <div style={{marginTop: '30px'}}>
+                                <h4>📈 Gráfico de Evolução</h4>
+                                <ResponsiveContainer width="100%" height={300}>
+                                    <LineChart data={results.evolutionData}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                                        <XAxis 
+                                            dataKey="month" 
+                                            stroke="var(--text-secondary-color)"
+                                            label={{ value: 'Mês', position: 'insideBottom', offset: -5, fill: 'var(--text-color)' }}
+                                        />
+                                        <YAxis 
+                                            stroke="var(--text-secondary-color)"
+                                            label={{ value: 'Montante (R$)', angle: -90, position: 'insideLeft', fill: 'var(--text-color)' }}
+                                            tickFormatter={val => formatCurrency(val)}
+                                        />
+                                        <RechartsTooltip 
+                                            contentStyle={{
+                                                backgroundColor: 'var(--card-bg)',
+                                                border: '1px solid var(--border-color)',
+                                                borderRadius: '5px'
+                                            }}
+                                            formatter={val => formatCurrency(val)}
+                                        />
+                                        <Legend />
+                                        <Line type="monotone" dataKey="composto" stroke="#005a9c" strokeWidth={2} name="Juros Compostos" />
+                                        <Line type="monotone" dataKey="simples" stroke="#ff6b6b" strokeWidth={2} name="Juros Simples" />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const MainMenu = ({ setView }) => {
     return (
         <>
@@ -3533,6 +3905,10 @@ const App = () => {
                 return <RuralCreditSimulator onSave={handleSaveSimulation} />;
             case 'receivablesDiscount':
                 return <ReceivablesDiscountSimulator onSave={handleSaveSimulation} />;
+            case 'settings':
+                return <SettingsMenu />;
+            case 'rateConverter':
+                return <InterestRateConverter />;
             case 'main':
             default:
                 return <MainMenu setView={setCurrentView} />;
