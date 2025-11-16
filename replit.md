@@ -53,12 +53,14 @@ The application functions as a PWA, featuring:
 - **jsPDF** and **jspdf-autotable**: For generating PDF reports.
 
 ## BACEN API Integration
-The application uses the following SGS (Sistema Gerenciador de Séries Temporais) series codes from Banco Central do Brasil:
-- **SELIC Meta**: Código 432 (Taxa Meta Selic % a.a.)
-- **CDI**: Código 4391 (CDI acumulado no mês %) → Anualizado via fórmula: `((1 + taxa_mensal/100)^12 - 1) * 100`
-- **IPCA**: Código 13522 (IPCA acumulado 12 meses %)
-- **INCC**: Código 193 (INCC-DI acumulado 12 meses %)
-- **USD/BRL**: AwesomeAPI (https://economia.awesomeapi.com.br/last/USD-BRL)
+The application uses the following SGS (Sistema Gerenciador de Séries Temporais) series codes from Banco Central do Brasil to fetch economic indicators:
+- **SELIC Meta**: Código 432 (Taxa Meta Selic % a.a.) → Returns annual rate directly
+- **CDI Anual**: Código 4391 (CDI acumulado no mês %) → Monthly rate annualized via formula: `((1 + taxa_mensal/100)^12 - 1) * 100`
+- **IPCA**: Código 13522 (IPCA acumulado 12 meses %) → Returns 12-month accumulated inflation
+- **INCC-DI**: Código 193 (INCC-DI acumulado 12 meses %) → Returns 12-month accumulated construction index
+- **USD/BRL**: AwesomeAPI (https://economia.awesomeapi.com.br/last/USD-BRL) → Real-time exchange rate
+
+**Expected values (November 2025):** SELIC ~15% a.a., CDI ~14.90% a.a., IPCA ~4.68%, INCC ~6.40%, USD/BRL ~5.80
 
 ## Recent Changes (November 16, 2025)
 - Added **Economic Indicators Dashboard** featuring 5 key Brazilian indicators: CDI, SELIC, IPCA, INCC, and Dólar/Real
