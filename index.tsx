@@ -1,6 +1,10 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, Legend, ResponsiveContainer } from 'recharts';
+import toast, { Toaster } from 'react-hot-toast';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const styles = `
   :root { /* Light Theme */
@@ -1033,6 +1037,79 @@ const styles = `
     }
   }
 
+  .loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 3px solid var(--border-color);
+    border-radius: 50%;
+    border-top-color: var(--primary-color);
+    animation: spin 0.6s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--modal-backdrop-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    border-radius: 10px;
+  }
+
+  .loading-text {
+    color: var(--text-color);
+    font-size: 1rem;
+    margin-left: 10px;
+  }
+
+  .chart-wrapper {
+    margin-top: 30px;
+    padding: 20px;
+    background-color: var(--background-color);
+    border-radius: 8px;
+  }
+
+  .chart-wrapper h4 {
+    color: var(--primary-color);
+    margin-bottom: 15px;
+    font-size: 1.1rem;
+  }
+
+  .fade-in {
+    animation: fadeIn 0.3s ease-in;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .btn-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .btn-group .btn {
+    flex: 1;
+    min-width: 150px;
+  }
+
+  .tooltip-info {
+    cursor: help;
+    color: var(--secondary-color);
+    margin-left: 5px;
+  }
+
 `;
 
 // --- UTILS ---
@@ -1086,6 +1163,55 @@ const getIncomeTaxRate = (days) => {
   if (days <= 360) return 0.20;
   if (days <= 720) return 0.175;
   return 0.15;
+};
+
+// --- PDF EXPORT ---
+const exportToPDF = (simulationType, data) => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+    
+    doc.setFontSize(18);
+    doc.setTextColor(0, 90, 156);
+    doc.text('Salva Bancário 2.0', pageWidth / 2, 20, { align: 'center' });
+    
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.text(simulationType, pageWidth / 2, 30, { align: 'center' });
+    
+    doc.setFontSize(10);
+    doc.setTextColor(102, 102, 102);
+    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, 38, { align: 'center' });
+    
+    let yPosition = 50;
+    
+    if (data.summary) {
+        doc.setFontSize(12);
+        doc.setTextColor(0, 90, 156);
+        doc.text('Resumo:', 14, yPosition);
+        yPosition += 8;
+        
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        data.summary.forEach(item => {
+            doc.text(`${item.label}: ${item.value}`, 20, yPosition);
+            yPosition += 6;
+        });
+        yPosition += 5;
+    }
+    
+    if (data.table) {
+        (doc as any).autoTable({
+            startY: yPosition,
+            head: [data.table.headers],
+            body: data.table.rows,
+            theme: 'grid',
+            headStyles: { fillColor: [0, 90, 156] },
+            styles: { fontSize: 9 },
+        });
+    }
+    
+    doc.save(`${simulationType.replace(/ /g, '_')}_${Date.now()}.pdf`);
+    toast.success('PDF exportado com sucesso!');
 };
 
 // --- API HOOK ---
@@ -1232,7 +1358,29 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                     </div>
                     <p style={{fontSize: '0.8rem', color: 'var(--text-secondary-color)', textAlign: 'center', marginBottom: '15px'}}>CDI base: {formatPercentage(cdiRate)} a.m.</p>
                     <button className="btn" onClick={handleCalculate}>Calcular</button>
-                    {results && <button className="btn btn-save" onClick={handleSave}>Salvar Simulação</button>}
+                    {results && (
+                        <div className="btn-group">
+                            <button className="btn btn-save" onClick={handleSave}>💾 Salvar</button>
+                            <button className="btn btn-secondary" onClick={() => exportToPDF('Simulação de Investimento', {
+                                summary: [
+                                    { label: 'Valor Inicial', value: formatCurrency(results.principal) },
+                                    { label: 'Prazo', value: `${results.numMonths} meses` },
+                                    { label: 'LCA/LCI - Valor Final', value: formatCurrency(results.finalValueLCA) },
+                                    { label: 'LCA/LCI - Rendimento', value: formatCurrency(results.profitLCA) },
+                                    { label: 'CDB/RDC - Valor Final Líquido', value: formatCurrency(results.finalValueCDBNet) },
+                                    { label: 'CDB/RDC - Rendimento Líquido', value: formatCurrency(results.profitCDBNet) }
+                                ],
+                                table: {
+                                    headers: ['Mês', 'Saldo LCA/LCI', 'Saldo CDB/RDC'],
+                                    rows: results.tableData.map(row => [
+                                        row.month,
+                                        formatCurrency(row.balanceLCA),
+                                        formatCurrency(row.balanceCDB)
+                                    ])
+                                }
+                            })}>📄 Exportar PDF</button>
+                        </div>
+                    )}
                 </div>
 
                 <div className="results-section">
@@ -1266,6 +1414,49 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                                         <p className="positive">{formatCurrency(results.profitCDBNet)}</p>
                                     </div>
                                 </div>
+                            </div>
+                            
+                            <div className="chart-wrapper fade-in">
+                                <h4>📈 Gráfico de Evolução</h4>
+                                <ResponsiveContainer width="100%" height={300}>
+                                    <LineChart data={results.tableData}>
+                                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border-color)" />
+                                        <XAxis 
+                                            dataKey="month" 
+                                            stroke="var(--text-secondary-color)"
+                                            label={{ value: 'Mês', position: 'insideBottom', offset: -5 }}
+                                        />
+                                        <YAxis 
+                                            stroke="var(--text-secondary-color)"
+                                            tickFormatter={(value) => `R$ ${(value / 1000).toFixed(0)}k`}
+                                        />
+                                        <ChartTooltip 
+                                            formatter={(value) => formatCurrency(value)}
+                                            contentStyle={{
+                                                backgroundColor: 'var(--card-bg)',
+                                                border: '1px solid var(--border-color)',
+                                                borderRadius: '5px'
+                                            }}
+                                        />
+                                        <Legend />
+                                        <Line 
+                                            type="monotone" 
+                                            dataKey="balanceLCA" 
+                                            stroke="var(--secondary-color)" 
+                                            strokeWidth={2}
+                                            name="LCA/LCI"
+                                            dot={false}
+                                        />
+                                        <Line 
+                                            type="monotone" 
+                                            dataKey="balanceCDB" 
+                                            stroke="var(--primary-color)" 
+                                            strokeWidth={2}
+                                            name="CDB/RDC"
+                                            dot={false}
+                                        />
+                                    </LineChart>
+                                </ResponsiveContainer>
                             </div>
                             
                             <h4 style={{marginTop: '30px', marginBottom: '10px'}}>Evolução Mensal</h4>
@@ -2051,18 +2242,18 @@ const ReceivablesDiscountSimulator = ({ onSave }) => {
     const handleAddReceivable = () => {
         const value = parseCurrency(currentValue);
         if (value <= 0) {
-            alert("O valor do recebível deve ser maior que zero.");
+            toast.error("O valor do recebível deve ser maior que zero.");
             return;
         }
         if (!currentDate) {
-            alert("Por favor, selecione uma data de vencimento.");
+            toast.error("Por favor, selecione uma data de vencimento.");
             return;
         }
         const today = new Date();
         today.setHours(0,0,0,0);
         const dueDate = new Date(currentDate + 'T00:00:00');
         if (dueDate <= today) {
-            alert("A data de vencimento deve ser no futuro.");
+            toast.error("A data de vencimento deve ser no futuro.");
             return;
         }
         
@@ -2138,7 +2329,7 @@ const ReceivablesDiscountSimulator = ({ onSave }) => {
 
     const handleCalculate = () => {
         if (!calculation) {
-             if (receivables.length === 0) alert("Adicione pelo menos um recebível para calcular.");
+             if (receivables.length === 0) toast.error("Adicione pelo menos um recebível para calcular.");
              return;
         }
         setResults(calculation);
@@ -2608,7 +2799,7 @@ const App = () => {
             ...simulationData
         };
         setHistory(prev => [newSimulation, ...prev]);
-        alert("Simulação salva com sucesso!");
+        toast.success("Simulação salva com sucesso!");
     };
     
     const handleLoadSimulation = (simulation) => {
@@ -2618,7 +2809,7 @@ const App = () => {
         console.log("Loading simulation:", simulation);
         setModal(null);
         // A more complex state management (like Redux or Context) would be better here.
-        alert("Funcionalidade de carregar simulação em desenvolvimento.");
+        toast("Funcionalidade de carregar simulação em desenvolvimento.", { icon: 'ℹ️' });
     };
 
     const handleClearHistory = () => {
@@ -2663,6 +2854,29 @@ const App = () => {
     return (
         <>
             <style>{styles}</style>
+            <Toaster 
+                position="top-right"
+                toastOptions={{
+                    duration: 3000,
+                    style: {
+                        background: 'var(--card-bg)',
+                        color: 'var(--text-color)',
+                        border: '1px solid var(--border-color)',
+                    },
+                    success: {
+                        iconTheme: {
+                            primary: 'var(--success-color)',
+                            secondary: 'white',
+                        },
+                    },
+                    error: {
+                        iconTheme: {
+                            primary: 'var(--danger-color)',
+                            secondary: 'white',
+                        },
+                    },
+                }}
+            />
              <button className="theme-toggle-btn" onClick={toggleTheme} aria-label="Mudar tema">
                 {theme === 'light' ? '🌙' : '☀️'}
             </button>
