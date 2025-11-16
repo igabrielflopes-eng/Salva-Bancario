@@ -1521,7 +1521,15 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
 
         if (system === 'price') {
             const factor = Math.pow(1 + monthlyRate, numMonths);
-            monthlyPayment = principal * (monthlyRate * factor) / (factor - 1);
+            const denominator = factor - 1;
+            
+            if (Math.abs(denominator) < 0.000001) {
+                // Handle near-zero rate case analytically (flat amortization)
+                monthlyPayment = principal / numMonths;
+            } else {
+                monthlyPayment = principal * (monthlyRate * factor) / denominator;
+            }
+            
             totalPaid = monthlyPayment * numMonths;
             totalInterest = totalPaid - principal;
 
@@ -1913,7 +1921,10 @@ const CompetitorRateFinder = ({ onSave }) => {
         for (let i = 0; i < 100; i++) {
             const mid = (low + high) / 2;
             
-            const calculatedPV = paymentVal * (1 - Math.pow(1 + mid, -numMonths)) / mid;
+            // Handle near-zero rate analytically using limit formula
+            const calculatedPV = Math.abs(mid) < 0.000001 
+                ? paymentVal * numMonths 
+                : paymentVal * (1 - Math.pow(1 + mid, -numMonths)) / mid;
 
             // The present value (PV) is a decreasing function of the interest rate (r).
             // If the calculated PV is higher than the loan amount, our rate `mid` is too low.
@@ -2073,7 +2084,14 @@ const RuralCreditSimulator = ({ onSave }) => {
 
         if (amortizationYears > 0) {
             const factor = Math.pow(1 + rate, amortizationYears);
-            annualPayment = principalAfterGrace * (rate * factor) / (factor - 1);
+            const denominator = factor - 1;
+            
+            if (Math.abs(denominator) < 0.000001) {
+                // Handle near-zero rate case analytically (flat amortization)
+                annualPayment = principalAfterGrace / amortizationYears;
+            } else {
+                annualPayment = principalAfterGrace * (rate * factor) / denominator;
+            }
 
             for (let i = 1; i <= amortizationYears; i++) {
                 const year = numGraceYears + i;
@@ -2813,9 +2831,48 @@ const App = () => {
     };
 
     const handleClearHistory = () => {
-        if (window.confirm("Tem certeza que deseja apagar todo o histórico?")) {
-            setHistory([]);
-        }
+        toast((t) => (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div>
+                    <strong>Confirmar exclusão</strong>
+                    <p style={{ margin: '5px 0' }}>Tem certeza que deseja apagar todo o histórico?</p>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                    <button
+                        onClick={() => toast.dismiss(t.id)}
+                        style={{
+                            padding: '6px 12px',
+                            background: 'var(--border-color)',
+                            border: 'none',
+                            borderRadius: '5px',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        onClick={() => {
+                            setHistory([]);
+                            toast.dismiss(t.id);
+                            toast.success('Histórico limpo com sucesso!');
+                        }}
+                        style={{
+                            padding: '6px 12px',
+                            background: '#dc3545',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '5px',
+                            cursor: 'pointer'
+                        }}
+                    >
+                        Confirmar
+                    </button>
+                </div>
+            </div>
+        ), {
+            duration: 8000,
+            icon: '⚠️'
+        });
     };
     
     const toggleTheme = () => {
