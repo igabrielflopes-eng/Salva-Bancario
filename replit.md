@@ -88,7 +88,26 @@ npm run preview
   - Added icons to action buttons
   - Enhanced overall user feedback
 
-### Current Session - Quick Selection & SAC for Rural Credit
+### Current Session - IOF e TAC nos Empréstimos
+- **Campos IOF e TAC**:
+  - Adicionado campo "IOF (%)" com valor padrão 0.38%
+  - Adicionado checkbox "Financiar IOF" que agrega o valor do IOF ao empréstimo
+  - Adicionado campo "TAC - Taxa de Abertura de Crédito (R$)"
+  - Aplicado aos empréstimos Prefixado e Pós-fixado
+  
+- **Cálculos atualizados**:
+  - IOF calculado sobre o valor solicitado
+  - Quando "Financiar IOF" marcado: IOF é adicionado ao principal financiado
+  - Quando desmarcado: IOF pago à vista (custo inicial)
+  - TAC sempre é custo inicial (não financiado)
+  - Custo Total = Total Pago (parcelas) + Custos Iniciais (IOF não financiado + TAC)
+  
+- **Interface atualizada**:
+  - Resultados mostram: Valor Solicitado, IOF, TAC, Valor Financiado
+  - Exibe primeira/última parcela, juros e custo total
+  - PDF inclui todos os campos: IOF, TAC, flag "Financiar IOF"
+
+### Previous Session - Quick Selection & SAC for Rural Credit
 - **Quick-Select Loan Term Buttons**:
   - Added preset buttons to Loan Calculators (Prefixado and Pós-fixado)
   - Buttons: 12, 24, 36, 48, 60 months + "Personalizado" (custom)
@@ -163,4 +182,4 @@ npm run preview
 - The application stores simulation history in browser localStorage
 - Theme preference is also persisted in localStorage
 - CDI rate is fetched dynamically (used in various calculations)
-- All components are currently in a single file (index.tsx) - approximately 3,237 lines
+- All components are currently in a single file (index.tsx) - approximately 3,284 lines
