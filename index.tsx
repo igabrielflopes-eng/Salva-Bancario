@@ -1668,6 +1668,22 @@ const annualToMonthly = (annualRate) => {
     return Math.pow(1 + annualRate, 1/12) - 1;
 };
 
+const getCDIForYear = (settings, year) => {
+    const currentYear = new Date().getFullYear();
+    
+    if (year <= currentYear) {
+        return settings.cdiAnnual;
+    } else if (year === 2026) {
+        return settings.cdi2026 || DEFAULT_SETTINGS.cdi2026;
+    } else if (year === 2027) {
+        return settings.cdi2027 || DEFAULT_SETTINGS.cdi2027;
+    } else if (year >= 2028) {
+        return settings.cdi2028 || DEFAULT_SETTINGS.cdi2028;
+    }
+    
+    return settings.cdiAnnual;
+};
+
 const DEFAULT_SETTINGS = {
     cdiAnnual: 0.1490, // 14.90%
     cdi2026: 0.1225, // 12.25% - Projeção Boletim Focus
