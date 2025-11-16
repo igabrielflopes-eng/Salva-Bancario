@@ -2928,6 +2928,22 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
                                     ])
                                 }
                             })}>📄 Exportar PDF</button>
+                            <button className="btn btn-secondary" onClick={() => exportToCSV({
+                                headers: ['Mês', 'Saldo LCA/LCI', 'Saldo CDB/RDC'],
+                                rows: results.tableData.map(row => [
+                                    row.month,
+                                    formatCurrency(row.balanceLCA),
+                                    formatCurrency(row.balanceCDB)
+                                ])
+                            }, 'aplicacao-programada.csv')}>📊 Exportar CSV</button>
+                            <button className="btn btn-secondary" onClick={() => {
+                                const shareData = shareSimulation(results, 'Aplicação Programada');
+                                if (shareData) {
+                                    window.open(shareData.whatsappUrl, '_blank');
+                                }
+                            }}>
+                                💬 Compartilhar no WhatsApp
+                            </button>
                         </div>
                     )}
                 </div>
@@ -3135,6 +3151,24 @@ const CompetitorRateFinder = ({ onSave }) => {
                                     { label: 'Taxa Anual Equivalente', value: formatPercentage(Math.pow(1 + results.calculatedRate, 12) - 1) }
                                 ]
                             })}>📄 Exportar PDF</button>
+                            <button className="btn btn-secondary" onClick={() => exportToCSV({
+                                headers: ['Descrição', 'Valor'],
+                                rows: [
+                                    ['Valor do Empréstimo', formatCurrency(results.loanAmount)],
+                                    ['Valor da Parcela', formatCurrency(results.monthlyPayment)],
+                                    ['Quantidade de Meses', `${results.months} meses`],
+                                    ['Taxa Mensal Calculada', formatPercentage(results.calculatedRate)],
+                                    ['Taxa Anual Equivalente', formatPercentage(Math.pow(1 + results.calculatedRate, 12) - 1)]
+                                ]
+                            }, 'taxa-concorrente.csv')}>📊 Exportar CSV</button>
+                            <button className="btn btn-secondary" onClick={() => {
+                                const shareData = shareSimulation(results, 'Taxa do Concorrente');
+                                if (shareData) {
+                                    window.open(shareData.whatsappUrl, '_blank');
+                                }
+                            }}>
+                                💬 Compartilhar no WhatsApp
+                            </button>
                         </div>
                     )}
                 </div>
@@ -3400,6 +3434,25 @@ const RuralCreditSimulator = ({ onSave }) => {
                                     ])
                                 }
                             })}>📄 Exportar PDF</button>
+                            <button className="btn btn-secondary" onClick={() => exportToCSV({
+                                headers: ['Ano', 'Tipo', 'Pagamento', 'Amortização', 'Juros', 'Saldo'],
+                                rows: results.tableData.map(row => [
+                                    row.year,
+                                    row.isGrace ? 'Carência' : 'Amortização',
+                                    formatCurrency(row.payment),
+                                    formatCurrency(row.principal),
+                                    formatCurrency(row.interest),
+                                    formatCurrency(row.balance)
+                                ])
+                            }, 'credito-rural.csv')}>📊 Exportar CSV</button>
+                            <button className="btn btn-secondary" onClick={() => {
+                                const shareData = shareSimulation(results, 'Crédito Rural');
+                                if (shareData) {
+                                    window.open(shareData.whatsappUrl, '_blank');
+                                }
+                            }}>
+                                💬 Compartilhar no WhatsApp
+                            </button>
                         </div>
                     )}
                 </div>
@@ -3659,6 +3712,25 @@ const ReceivablesDiscountSimulator = ({ onSave }) => {
                                     ])
                                 }
                             })}>📄 Exportar PDF</button>
+                            <button className="btn btn-secondary" onClick={() => exportToCSV({
+                                headers: ['Título', 'Valor Bruto', 'Dias', 'Juros', 'IOF', 'Valor Líquido'],
+                                rows: results.receivablesDetails.map((r, idx) => [
+                                    `Título ${idx + 1}`,
+                                    formatCurrency(r.grossValue),
+                                    r.days,
+                                    formatCurrency(r.interest),
+                                    formatCurrency(r.iof),
+                                    formatCurrency(r.netValue)
+                                ])
+                            }, 'desconto-recebiveis.csv')}>📊 Exportar CSV</button>
+                            <button className="btn btn-secondary" onClick={() => {
+                                const shareData = shareSimulation(results, 'Desconto de Recebíveis');
+                                if (shareData) {
+                                    window.open(shareData.whatsappUrl, '_blank');
+                                }
+                            }}>
+                                💬 Compartilhar no WhatsApp
+                            </button>
                         </div>
                     )}
                 </div>
@@ -4749,6 +4821,25 @@ const InterestRateConverter = () => {
 
                             <div className="btn-group" style={{marginTop: '20px'}}>
                                 <button className="btn" onClick={exportToPDF}>📄 Exportar PDF</button>
+                                <button className="btn btn-secondary" onClick={() => exportToCSV({
+                                    headers: ['Descrição', 'Valor'],
+                                    rows: [
+                                        ['Taxa Original', `${rateInput}% ${periodOptions.find(p => p.value === fromPeriod)?.label || ''}`],
+                                        ['Conversão Composta', `${formatPercentage(results.convertedCompound)} ${periodOptions.find(p => p.value === toPeriod)?.label || ''}`],
+                                        ['Conversão Linear', `${formatPercentage(results.convertedSimple)} ${periodOptions.find(p => p.value === toPeriod)?.label || ''}`],
+                                        ['Taxa Diária Equivalente', `${formatPercentage(results.dailyCompound)} a.d.`],
+                                        ['Taxa Mensal Equivalente', `${formatPercentage(results.monthlyCompound)} a.m.`],
+                                        ['Taxa Anual Equivalente', `${formatPercentage(results.yearlyCompound)} a.a.`]
+                                    ]
+                                }, 'conversao-taxas.csv')}>📊 Exportar CSV</button>
+                                <button className="btn btn-secondary" onClick={() => {
+                                    const shareData = shareSimulation(results, 'Conversão de Taxas');
+                                    if (shareData) {
+                                        window.open(shareData.whatsappUrl, '_blank');
+                                    }
+                                }}>
+                                    💬 Compartilhar no WhatsApp
+                                </button>
                             </div>
                         </>
                     )}
