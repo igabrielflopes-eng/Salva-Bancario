@@ -1367,17 +1367,23 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
             };
         });
 
+        // Calculate net return rates in percentage
+        const netRateLCA = (profitLCA / principal) * 100;
+        const netRateCDB = (profitCDBNet / principal) * 100;
+
         return {
             principal,
             numMonths,
             finalValueLCA,
             profitLCA,
+            netRateLCA,
             finalValueCDBGross,
             profitCDBGross,
             taxRate,
             taxAmount,
             finalValueCDBNet,
             profitCDBNet,
+            netRateCDB,
             tableData,
             lcaProfitability: lcaProf,
             cdbProfitability: cdbProf,
@@ -1439,8 +1445,10 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                                     { label: 'Prazo', value: `${results.numMonths} meses` },
                                     { label: 'LCA/LCI - Valor Final', value: formatCurrency(results.finalValueLCA) },
                                     { label: 'LCA/LCI - Rendimento', value: formatCurrency(results.profitLCA) },
+                                    { label: 'LCA/LCI - Taxa Final Líquida', value: `${results.netRateLCA.toFixed(2)}%` },
                                     { label: 'CDB/RDC - Valor Final Líquido', value: formatCurrency(results.finalValueCDBNet) },
-                                    { label: 'CDB/RDC - Rendimento Líquido', value: formatCurrency(results.profitCDBNet) }
+                                    { label: 'CDB/RDC - Rendimento Líquido', value: formatCurrency(results.profitCDBNet) },
+                                    { label: 'CDB/RDC - Taxa Final Líquida', value: `${results.netRateCDB.toFixed(2)}%` }
                                 ],
                                 table: {
                                     headers: ['Mês', 'Saldo LCA/LCI', 'Saldo CDB/RDC'],
@@ -1470,6 +1478,10 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                                         <h4>Total em Juros</h4>
                                         <p className="positive">{formatCurrency(results.profitLCA)}</p>
                                     </div>
+                                    <div className="summary-item">
+                                        <h4>Taxa Final Líquida</h4>
+                                        <p className="positive">{results.netRateLCA.toFixed(2)}%</p>
+                                    </div>
                                 </div>
                                 <div className="cdb-results">
                                      <h4>CDB / RDC</h4>
@@ -1484,6 +1496,10 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                                      <div className="summary-item">
                                         <h4>Total em Juros Líquido</h4>
                                         <p className="positive">{formatCurrency(results.profitCDBNet)}</p>
+                                    </div>
+                                    <div className="summary-item">
+                                        <h4>Taxa Final Líquida</h4>
+                                        <p className="positive">{results.netRateCDB.toFixed(2)}%</p>
                                     </div>
                                 </div>
                             </div>
