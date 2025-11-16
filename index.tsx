@@ -1581,10 +1581,29 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
 const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
     const [loanAmount, setLoanAmount] = useState('R$ 50.000,00');
     const [months, setMonths] = useState('36');
+    const [customMonths, setCustomMonths] = useState('');
+    const [isCustomMonths, setIsCustomMonths] = useState(false);
     const [interestRate, setInterestRate] = useState('2.5');
     const [fixedSpread, setFixedSpread] = useState('0.5');
     const [system, setSystem] = useState('price');
     const [results, setResults] = useState(null);
+    
+    const handleMonthSelection = (value) => {
+        setMonths(value);
+        setIsCustomMonths(false);
+        setCustomMonths('');
+    };
+    
+    const handleCustomClick = () => {
+        setIsCustomMonths(true);
+        setMonths(customMonths || '12');
+    };
+    
+    useEffect(() => {
+        if (isCustomMonths && customMonths) {
+            setMonths(customMonths);
+        }
+    }, [customMonths, isCustomMonths]);
 
     const effectiveInterestRate = useMemo(() => {
         if (!isPostFixed) return parseFloat(interestRate) / 100;
@@ -1688,8 +1707,16 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
                         <input type="text" id="loanAmount" value={loanAmount} onChange={handleCurrencyChange(setLoanAmount)} />
                     </div>
                     <div className="form-group">
-                        <label htmlFor="months">Prazo (meses)</label>
-                        <input type="number" id="months" value={months} onChange={e => setMonths(e.target.value)} />
+                        <label>Prazo (Meses)</label>
+                        <div className="period-filters">
+                            {['12', '24', '36', '48', '60'].map(m => (
+                                <button key={m} onClick={() => handleMonthSelection(m)} className={!isCustomMonths && months === m ? 'active' : ''}>{m}</button>
+                            ))}
+                            <button onClick={handleCustomClick} className={isCustomMonths ? 'active' : ''}>Personal.</button>
+                        </div>
+                        {isCustomMonths && (
+                            <input type="number" value={customMonths} onChange={e => setCustomMonths(e.target.value)} placeholder="Digite os meses" />
+                        )}
                     </div>
                     {isPostFixed ? (
                         <>
