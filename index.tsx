@@ -5050,13 +5050,13 @@ const EconomicIndicators = ({ setView }) => {
 
                     <div style={{marginTop: '20px', padding: '15px', backgroundColor: 'var(--bg-color)', borderRadius: '8px', border: '1px solid var(--border-color)'}}>
                         <p style={{fontSize: '0.85rem', color: 'var(--text-secondary-color)', margin: '0'}}>
-                            💡 <strong>Dica:</strong> Para atualizar os indicadores automaticamente via API do Banco Central, acesse <strong>Definições</strong> e clique em "Atualizar via BACEN".
+                            💡 <strong>Dica:</strong> Para atualizar os indicadores automaticamente via API do Banco Central, acesse <strong>Configurações</strong> e clique em "Atualizar via BACEN".
                         </p>
                     </div>
 
                     <div className="action-buttons">
                         <button className="btn btn-secondary" onClick={() => setView('home')}>← Voltar ao Menu</button>
-                        <button className="btn btn-primary" onClick={() => setView('settings')}>⚙️ Ir para Definições</button>
+                        <button className="btn btn-primary" onClick={() => setView('settings')}>⚙️ Ir para Configurações</button>
                     </div>
                 </div>
             </div>
@@ -5073,17 +5073,17 @@ const MainMenu = ({ setView }) => {
             </div>
             <div className="card-grid">
                 <FeatureCard icon="📊" title="Indicadores Econômicos" description="Visualize CDI, SELIC, IPCA e Dólar." onClick={() => setView('indicators')} />
-                <FeatureCard icon="💰" title="Simular Investimento" description="Compare a rentabilidade de LCA/LCI e CDB/RDC." onClick={() => setView('investment')} />
-                <FeatureCard icon="🗓️" title="Aplicação Programada" description="Simule o acúmulo de patrimônio com aportes mensais." onClick={() => setView('scheduledApplication')} />
-                <FeatureCard icon="🧾" title="Desconto de Recebíveis" description="Simule a antecipação de boletos e cheques." onClick={() => setView('receivablesDiscount')} />
-                <FeatureCard icon="💸" title="Empréstimo Prefixado" description="Calcule empréstimos com taxas de juros fixas." onClick={() => setView('loanPre')} />
-                <FeatureCard icon="📈" title="Empréstimo Pós-fixado" description="Simule empréstimos atrelados ao CDI." onClick={() => setView('loanPost')} />
+                <FeatureCard icon="💰" title="Comparar Investimento" description="Compare a rentabilidade de LCA/LCI e CDB/RDC." onClick={() => setView('investment')} />
+                <FeatureCard icon="🗓️" title="Poupança Programada" description="Simule o acúmulo de patrimônio com aportes mensais." onClick={() => setView('scheduledApplication')} />
+                <FeatureCard icon="🧾" title="Antecipar Recebíveis" description="Calcule quanto recebe antecipando boletos e cheques." onClick={() => setView('receivablesDiscount')} />
+                <FeatureCard icon="💸" title="Empréstimo Taxa Fixa" description="Simule empréstimos com juros que não mudam." onClick={() => setView('loanPre')} />
+                <FeatureCard icon="📈" title="Empréstimo Taxa Variável" description="Simule empréstimos com juros que acompanham o CDI." onClick={() => setView('loanPost')} />
                 <FeatureCard icon="🌾" title="Crédito Rural" description="Simule financiamentos rurais com carência e sistemas SAC/PRICE." onClick={() => setView('ruralCredit')} />
-                <FeatureCard icon="🏦" title="Taxa do Concorrente" description="Descubra a taxa de juros de um empréstimo." onClick={() => setView('competitorRate')} />
-                <FeatureCard icon="🔄" title="Conversão de Taxas" description="Capitalize e descapitalize taxas entre diferentes períodos." onClick={() => setView('rateConverter')} />
-                <FeatureCard icon="🔍" title="Comparador" description="Compare lado a lado duas simulações salvas." onClick={() => setView('comparison')} />
+                <FeatureCard icon="🏦" title="Descobrir Taxa Juros" description="Descubra qual a taxa de juros do seu empréstimo." onClick={() => setView('competitorRate')} />
+                <FeatureCard icon="🔄" title="Converter Taxas" description="Capitalização e descapitalização entre diferentes períodos." onClick={() => setView('rateConverter')} />
+                <FeatureCard icon="🔍" title="Comparar Simulações" description="Compare lado a lado duas simulações salvas." onClick={() => setView('comparison')} />
                 <FeatureCard icon="🗂️" title="Histórico" description="Veja e compare suas simulações salvas." onClick={() => setView('history')} />
-                <FeatureCard icon="⚙️" title="Definições" description="Configure valores padrão do aplicativo." onClick={() => setView('settings')} />
+                <FeatureCard icon="⚙️" title="Configurações" description="Configure valores padrão do aplicativo." onClick={() => setView('settings')} />
             </div>
         </>
     );
