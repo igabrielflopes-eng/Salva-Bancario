@@ -18,11 +18,10 @@ I prefer iterative development, with clear communication before major changes ar
 - **PDF Export**: jsPDF with jspdf-autotable (for reports)
 
 ### Core Features
-- **Investment Simulator**: Compare LCA/LCI vs. CDB/RDC with multi-year CDI projections.
-- **Loan Calculators**: Prefixado (fixed-rate) and Pós-fixado (CDI-linked with multi-year projections), supporting IOF, TAC, and financing options.
+- **Investment Simulator**: Compare LCA/LCI vs. CDB/RDC with multi-year CDI projections and quick-period buttons (30d, 60d, 90d, 6m, 1a, 2a, custom).
+- **Loan Calculators**: Prefixado (fixed-rate) and Pós-fixado (CDI-linked with multi-year projections), with simplified IOF calculation (checkbox-based) and automatic TAC financing.
 - **Scheduled Application Calculator**: Simulate wealth accumulation with dynamic CDI projections for long-term planning.
 - **Competitor Rate Finder**: Determine competitor loan rates.
-- **Rural Credit Simulator**: Financing with grace periods, annual payments, and both PRICE and SAC amortization systems.
 - **Receivables Discount Simulator**: Calculate discounting.
 - **History & Comparison Tools**: Save and compare simulations.
 - **Dark/Light Theme Toggle**: User-controlled theme.
@@ -31,7 +30,7 @@ I prefer iterative development, with clear communication before major changes ar
 - **Progressive Web App (PWA)**: Installable, offline-first application with custom icons and a branded theme.
 - **Universal PDF Export**: Generate professional PDF reports for all simulators, optimized for Replit/iframe environments.
 - **Mobile Responsiveness**: Tables transform into responsive card layouts on small screens; graphs reposition for better UX flow.
-- **Menu Organization**: Cards organized by categories - Investments, Loans, Tools, and Settings for intuitive navigation.
+- **Menu Organization**: Cards organized in logical order - Investments, Loans, Tools, and Settings for intuitive navigation.
 
 ### PWA Implementation
 The application functions as a PWA, featuring:
