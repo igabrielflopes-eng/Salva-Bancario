@@ -1195,6 +1195,12 @@ const formatPercentage = (value) => {
   return `${(value * 100).toFixed(2).replace('.', ',')}%`;
 };
 
+const formatCDI = (monthlyRate, annualRate) => {
+    const monthly = formatPercentage(monthlyRate);
+    const annual = formatPercentage(annualRate);
+    return `${monthly} a.m. (${annual} a.a.)`;
+};
+
 const parseCurrency = (value) => {
     if (typeof value !== 'string' || value === '') return 0;
     return Number(value.replace(/[^0-9,-]+/g,"").replace(",", ".")) || 0;
@@ -1394,6 +1400,7 @@ const FeatureCard = ({ icon, title, description, onClick }) => (
 
 const InvestmentSimulator = ({ onSave, cdiRate }) => {
     const { settings } = useSettings();
+    const { cdiMonthly, cdiAnnual } = useCDI();
     
     const [initialValue, setInitialValue] = useState('R$ 10.000,00');
     const [months, setMonths] = useState('12');
@@ -1504,7 +1511,7 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                         </label>
                         <input type="number" id="cdbProfitability" value={cdbProfitability} onChange={e => setCdbProfitability(e.target.value)} />
                     </div>
-                    <p style={{fontSize: '0.8rem', color: 'var(--text-secondary-color)', textAlign: 'center', marginBottom: '15px'}}>CDI base: {formatPercentage(cdiRate)} a.m.</p>
+                    <p style={{fontSize: '0.8rem', color: 'var(--text-secondary-color)', textAlign: 'center', marginBottom: '15px'}}>CDI: {formatCDI(cdiMonthly, cdiAnnual)}</p>
                     <button className="btn" onClick={handleCalculate}>Calcular</button>
                     {results && (
                         <div className="btn-group">
@@ -1650,6 +1657,7 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
 
 const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
     const { settings } = useSettings();
+    const { cdiMonthly, cdiAnnual } = useCDI();
     
     const [loanAmount, setLoanAmount] = useState('R$ 50.000,00');
     const [months, setMonths] = useState('36');
@@ -1818,7 +1826,8 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
                                     step="0.01"
                                 />
                                 <p style={{fontSize: '0.8rem', color: 'var(--text-secondary-color)', textAlign: 'center', marginTop: '5px'}}>
-                                    Taxa efetiva: {formatPercentage(cdiRate)} (CDI) + {fixedSpread}% = {formatPercentage(cdiRate + parseFloat(fixedSpread)/100)} a.m.
+                                    CDI: {formatCDI(cdiMonthly, cdiAnnual)}<br/>
+                                    Taxa efetiva: {formatPercentage(cdiRate)} + {fixedSpread}% = {formatPercentage(cdiRate + parseFloat(fixedSpread)/100)} a.m.
                                 </p>
                             </div>
                         </>
@@ -1955,6 +1964,8 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
 };
 
 const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
+    const { cdiMonthly, cdiAnnual } = useCDI();
+    
     const [initialDeposit, setInitialDeposit] = useState('R$ 0,00');
     const [monthlyDeposit, setMonthlyDeposit] = useState('R$ 1.000,00');
     const [months, setMonths] = useState('12');
@@ -2087,7 +2098,7 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
                         <input type="number" value={cdbProfitability} onChange={e => setCdbProfitability(e.target.value)} />
                     </div>
                      <p className="form-note">Observação: Aplicações em LCA/LCI podem ter carência (ex: 6 meses). Cada novo aporte pode estar sujeito a uma nova carência.</p>
-                     <p style={{fontSize: '0.8rem', color: 'var(--text-secondary-color)', textAlign: 'center', marginBottom: '15px'}}>CDI base: {formatPercentage(cdiRate)} a.m.</p>
+                     <p style={{fontSize: '0.8rem', color: 'var(--text-secondary-color)', textAlign: 'center', marginBottom: '15px'}}>CDI: {formatCDI(cdiMonthly, cdiAnnual)}</p>
                     <button className="btn" onClick={handleCalculate} disabled={!activeMonths || parseInt(activeMonths) <= 0}>Calcular</button>
                     {results && (
                         <div className="btn-group">
