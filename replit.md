@@ -52,6 +52,14 @@ The application functions as a PWA, featuring:
 - **React Hot Toast**: For modern toast notifications.
 - **jsPDF** and **jspdf-autotable**: For generating PDF reports.
 
+## BACEN API Integration
+The application uses the following SGS (Sistema Gerenciador de Séries Temporais) series codes from Banco Central do Brasil:
+- **SELIC Meta**: Código 432 (Taxa Meta Selic % a.a.)
+- **CDI**: Código 4391 (CDI acumulado no mês %) → Anualizado via fórmula: `((1 + taxa_mensal/100)^12 - 1) * 100`
+- **IPCA**: Código 13522 (IPCA acumulado 12 meses %)
+- **INCC**: Código 193 (INCC-DI acumulado 12 meses %)
+- **USD/BRL**: AwesomeAPI (https://economia.awesomeapi.com.br/last/USD-BRL)
+
 ## Recent Changes (November 16, 2025)
 - Added **Economic Indicators Dashboard** featuring 5 key Brazilian indicators: CDI, SELIC, IPCA, INCC, and Dólar/Real
 - Implemented hybrid approach for indicators: manual editing (offline-first) with optional automatic updates via BACEN API
@@ -60,3 +68,5 @@ The application functions as a PWA, featuring:
 - Created dedicated EconomicIndicators component with color-coded indicator cards
 - Positioned "Indicadores Econômicos" card as first item in main menu for easy access
 - Maintained offline-first architecture while allowing opt-in API usage for real-time data
+- **Fixed BACEN API codes**: Corrected series codes to fetch annual/accumulated values instead of monthly variations (SELIC 432, CDI 4391→annualized, IPCA 13522, INCC 193)
+- **Simplified Interest Rate Converter**: Removed monetary calculations, now focuses exclusively on rate capitalization/decapitalization between periods
