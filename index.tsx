@@ -2929,7 +2929,7 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
                                     onChange={() => setUseSelicProjection(true)}
                                     style={{marginRight: '8px'}}
                                 />
-                                SELIC ({settings.selic.toFixed(2)}% a.a.)
+                                SELIC ({settings?.selic?.toFixed(2) || '0.00'}% a.a.)
                             </label>
                         </div>
                         <p style={{fontSize: '0.75rem', color: 'var(--text-secondary-color)', marginTop: '8px', lineHeight: '1.4'}}>
