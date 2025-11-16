@@ -76,4 +76,5 @@ The application uses a limited BACEN integration via the "Atualizar via BACEN" b
 - **Limited BACEN API Integration**: "Atualizar via BACEN" now updates only SELIC, IPCA, and Dólar. CDI is manual-input only to maintain offline-first philosophy and reduce API dependency
 - **Restored Rural Credit Simulator**: Added "Crédito Rural" card back to main menu with proper icon and description
 - **Investment Simulator Enhancement**: Added toggle to choose between CDI projections (multi-year) or constant SELIC rate. UI labels now update dynamically based on selected rate type
+- **Scheduled Application Enhancement**: Added same CDI/SELIC toggle as Investment Simulator with dynamic labels and rate explanations
 - **Standardized Export Functions**: All 11 simulators now feature complete export capabilities (PDF, CSV/Excel, WhatsApp sharing) with consistent UI and data formatting across the application
