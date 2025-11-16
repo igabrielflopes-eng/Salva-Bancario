@@ -205,6 +205,13 @@ const styles = `
     gap: 10px;
     align-items: flex-end;
   }
+  
+  .form-group-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
 
   .form-group.inline > div {
     flex-grow: 1;
@@ -217,13 +224,17 @@ const styles = `
     height: 47px;
   }
 
-  .form-group label {
+  .form-group label, .form-group-toggle label {
     display: flex;
     align-items: center;
     gap: 8px;
     margin-bottom: 8px;
     font-weight: 500;
     color: var(--text-color);
+  }
+  
+  .form-group-toggle label {
+      margin-bottom: 0;
   }
 
   .form-group input, .form-group select {
@@ -332,7 +343,7 @@ const styles = `
   .summary-item p.positive { color: var(--success-color); }
   .summary-item p.negative { color: var(--danger-color); }
 
-  .cdb-breakdown {
+  .cdb-breakdown, .discount-breakdown {
     font-size: 0.9rem;
     color: var(--text-secondary-color);
     margin-top: 10px;
@@ -340,19 +351,26 @@ const styles = `
     border-top: 1px solid var(--border-color);
     text-align: left;
   }
-  .cdb-breakdown div {
+  .cdb-breakdown div, .discount-breakdown div {
     display: flex;
     justify-content: space-between;
     margin-bottom: 5px;
   }
-  .cdb-breakdown div:last-child {
+  .cdb-breakdown div:last-child, .discount-breakdown div:last-child {
     margin-bottom: 0;
   }
-  .cdb-breakdown div span:last-child {
+  .cdb-breakdown div span:last-child, .discount-breakdown div span:last-child {
     font-weight: 500;
   }
-  .cdb-breakdown .ir-value {
+  .cdb-breakdown .ir-value, .discount-breakdown .discount-value {
     color: var(--danger-color);
+  }
+  .discount-breakdown .gross-value {
+      color: var(--success-color);
+  }
+  .discount-breakdown .net-value {
+      font-weight: 600;
+      color: var(--primary-color);
   }
 
 
@@ -380,6 +398,13 @@ const styles = `
     font-weight: 600;
     position: sticky;
     top: 0;
+  }
+  
+  td.period-label {
+    background-color: var(--table-header-bg);
+    font-weight: bold;
+    color: var(--primary-color);
+    text-align: center;
   }
 
   tbody tr:nth-child(even) {
@@ -466,6 +491,39 @@ const styles = `
   .history-item p {
     font-size: 1rem;
     color: var(--text-color);
+  }
+
+  .receivables-list {
+    max-height: 150px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 5px;
+    padding: 10px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+  }
+  .receivable-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px;
+    border-radius: 4px;
+  }
+  .receivable-item:nth-child(even) {
+      background-color: var(--background-color);
+  }
+  .receivable-item-info {
+    display: flex;
+    gap: 15px;
+    font-size: 0.9rem;
+  }
+  .receivable-item button {
+    background: transparent;
+    border: none;
+    color: var(--danger-color);
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: bold;
   }
 
   .check-list-item {
@@ -989,9 +1047,34 @@ const formatPercentage = (value) => {
 };
 
 const parseCurrency = (value) => {
-    if (typeof value !== 'string') return 0;
+    if (typeof value !== 'string' || value === '') return 0;
     return Number(value.replace(/[^0-9,-]+/g,"").replace(",", ".")) || 0;
 };
+
+const handleCurrencyChange = (setter) => (e) => {
+    let value = e.target.value;
+    value = value.replace(/\D/g, '');
+
+    if (value === '') {
+        setter('');
+        return;
+    }
+
+    value = BigInt(value).toString();
+
+    if (value.length <= 2) {
+        value = value.padStart(3, '0');
+    }
+
+    const integerPart = value.slice(0, -2);
+    const decimalPart = value.slice(-2);
+
+    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+    
+    const finalValue = `R$ ${formattedInteger || '0'},${decimalPart}`;
+    setter(finalValue);
+};
+
 
 const parsePercentage = (value) => {
   if (typeof value !== 'string') return 0;
@@ -1007,42 +1090,11 @@ const getIncomeTaxRate = (days) => {
 
 // --- API HOOK ---
 const useCDI = () => {
-    const [cdiRate, setCdiRate] = useState(0.0833); // Approx. 10.5% p.a. / 12 as fallback
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-
-    useEffect(() => {
-        const fetchCDI = async () => {
-            try {
-                // BCB API URL for last 30 days of CDI
-                const url = 'https://api.bcb.gov.br/dados/serie/bcdata.sgs.12/dados?formato=json&dataInicial=';
-                const today = new Date();
-                const pastDate = new Date();
-                pastDate.setDate(today.getDate() - 30);
-                const formatDate = (date) => `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getFullYear()}`;
-                
-                const response = await fetch(`${url}${formatDate(pastDate)}&dataFinal=${formatDate(today)}`);
-                if (!response.ok) {
-                    throw new Error('Network response was not ok');
-                }
-                const data = await response.json();
-                if (data && data.length > 0) {
-                    const latestRate = parseFloat(data[data.length - 1].valor.replace(',', '.'));
-                    // The API gives daily rate, let's estimate monthly
-                    const dailyFactor = 1 + (latestRate / 100);
-                    const monthlyFactor = Math.pow(dailyFactor, 21); // Approx. 21 working days in a month
-                    const monthlyRate = (monthlyFactor - 1);
-                    setCdiRate(monthlyRate);
-                }
-            } catch (err) {
-                setError(err.message);
-                console.error("Failed to fetch CDI rate:", err);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchCDI();
-    }, []);
+    // Fixed monthly CDI rate of 1.28% as requested.
+    // Annual CDI: 14.90%, Selic: 15.00% are for reference but not directly used in monthly calculations.
+    const cdiRate = 0.0128; // 1.28%
+    const loading = false;
+    const error = null;
 
     return { cdiRate, loading, error };
 };
@@ -1075,7 +1127,7 @@ const FeatureCard = ({ icon, title, description, onClick }) => (
 );
 
 const InvestmentSimulator = ({ onSave, cdiRate }) => {
-    const [initialValue, setInitialValue] = useState('10000');
+    const [initialValue, setInitialValue] = useState('R$ 10.000,00');
     const [months, setMonths] = useState('12');
     const [lcaProfitability, setLcaProfitability] = useState('98');
     const [cdbProfitability, setCdbProfitability] = useState('110');
@@ -1154,7 +1206,7 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                     <h3>Simulador de Investimentos</h3>
                     <div className="form-group">
                         <label htmlFor="initialValue">Valor Inicial (R$)</label>
-                        <input type="text" id="initialValue" value={initialValue} onChange={e => setInitialValue(e.target.value)} />
+                        <input type="text" id="initialValue" value={initialValue} onChange={handleCurrencyChange(setInitialValue)} />
                     </div>
                     <div className="form-group">
                         <label htmlFor="months">Prazo (meses)</label>
@@ -1248,7 +1300,7 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
 };
 
 const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
-    const [loanAmount, setLoanAmount] = useState('50000');
+    const [loanAmount, setLoanAmount] = useState('R$ 50.000,00');
     const [months, setMonths] = useState('36');
     const [interestRate, setInterestRate] = useState('2.5');
     const [cdiPercent, setCdiPercent] = useState('150');
@@ -1349,7 +1401,7 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
                     <h3>Empréstimo {isPostFixed ? "Pós-fixado" : "Prefixado"}</h3>
                      <div className="form-group">
                         <label htmlFor="loanAmount">Valor do Empréstimo (R$)</label>
-                        <input type="text" id="loanAmount" value={loanAmount} onChange={e => setLoanAmount(e.target.value)} />
+                        <input type="text" id="loanAmount" value={loanAmount} onChange={handleCurrencyChange(setLoanAmount)} />
                     </div>
                     <div className="form-group">
                         <label htmlFor="months">Prazo (meses)</label>
@@ -1443,8 +1495,8 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
 };
 
 const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
-    const [initialDeposit, setInitialDeposit] = useState('0');
-    const [monthlyDeposit, setMonthlyDeposit] = useState('1000');
+    const [initialDeposit, setInitialDeposit] = useState('R$ 0,00');
+    const [monthlyDeposit, setMonthlyDeposit] = useState('R$ 1.000,00');
     const [months, setMonths] = useState('12');
     const [customMonths, setCustomMonths] = useState('');
     const [isCustomMonths, setIsCustomMonths] = useState(false);
@@ -1548,11 +1600,11 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
                     <h3>Aplicação Programada</h3>
                     <div className="form-group">
                         <label>Aporte Inicial (R$)</label>
-                        <input type="text" value={initialDeposit} onChange={e => setInitialDeposit(e.target.value)} />
+                        <input type="text" value={initialDeposit} onChange={handleCurrencyChange(setInitialDeposit)} />
                     </div>
                     <div className="form-group">
                         <label>Aportes Mensais (R$)</label>
-                        <input type="text" value={monthlyDeposit} onChange={e => setMonthlyDeposit(e.target.value)} />
+                        <input type="text" value={monthlyDeposit} onChange={handleCurrencyChange(setMonthlyDeposit)} />
                     </div>
                     <div className="form-group">
                         <label>Prazo (Meses)</label>
@@ -1651,8 +1703,8 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
 };
 
 const CompetitorRateFinder = ({ onSave }) => {
-    const [loanAmount, setLoanAmount] = useState('50000');
-    const [monthlyPayment, setMonthlyPayment] = useState('2000');
+    const [loanAmount, setLoanAmount] = useState('R$ 50.000,00');
+    const [monthlyPayment, setMonthlyPayment] = useState('R$ 2.000,00');
     const [months, setMonths] = useState('36');
     const [results, setResults] = useState(null);
     const [error, setError] = useState('');
@@ -1665,27 +1717,26 @@ const CompetitorRateFinder = ({ onSave }) => {
 
         let low = 0.0;
         let high = 1.0; // 100% monthly rate, a very high upper bound
-        const precision = 1e-7;
 
-        for (let i = 0; i < 100; i++) { // Max 100 iterations
+        // A fixed number of iterations is sufficient for high precision with the bisection method.
+        for (let i = 0; i < 100; i++) {
             const mid = (low + high) / 2;
-            if (mid < precision) break;
             
             const calculatedPV = paymentVal * (1 - Math.pow(1 + mid, -numMonths)) / mid;
 
-            if (Math.abs(calculatedPV - loanVal) < precision) {
-                 high = mid; // Converged
-                 break;
-            }
-
+            // The present value (PV) is a decreasing function of the interest rate (r).
+            // If the calculated PV is higher than the loan amount, our rate `mid` is too low.
+            // We need to search in the upper half of the rates.
             if (calculatedPV > loanVal) {
-                high = mid;
-            } else {
                 low = mid;
+            } else {
+                // Otherwise, our rate `mid` is too high, so we search in the lower half.
+                high = mid;
             }
         }
         
         const finalRate = (low + high) / 2;
+        
         if (finalRate >= 1.0) {
              setError("Não foi possível calcular a taxa. Verifique os valores de entrada.");
              return null;
@@ -1693,6 +1744,7 @@ const CompetitorRateFinder = ({ onSave }) => {
 
         return finalRate;
     };
+
 
     const handleCalculate = () => {
         setError('');
@@ -1729,11 +1781,11 @@ const CompetitorRateFinder = ({ onSave }) => {
                     <h3>Apurar Taxa do Concorrente</h3>
                      <div className="form-group">
                         <label htmlFor="loanAmount">Valor do Empréstimo (R$)</label>
-                        <input type="text" id="loanAmount" value={loanAmount} onChange={e => setLoanAmount(e.target.value)} />
+                        <input type="text" id="loanAmount" value={loanAmount} onChange={handleCurrencyChange(setLoanAmount)} />
                     </div>
                      <div className="form-group">
                         <label htmlFor="monthlyPayment">Valor da Parcela (R$)</label>
-                        <input type="text" id="monthlyPayment" value={monthlyPayment} onChange={e => setMonthlyPayment(e.target.value)} />
+                        <input type="text" id="monthlyPayment" value={monthlyPayment} onChange={handleCurrencyChange(setMonthlyPayment)} />
                     </div>
                     <div className="form-group">
                         <label htmlFor="months">Quantidade de Meses</label>
@@ -1762,6 +1814,462 @@ const CompetitorRateFinder = ({ onSave }) => {
 };
 
 
+const RuralCreditSimulator = ({ onSave }) => {
+    const [loanAmount, setLoanAmount] = useState('R$ 200.000,00');
+    const [annualRate, setAnnualRate] = useState('7.5');
+    const [totalYears, setTotalYears] = useState('10');
+    const [graceYears, setGraceYears] = useState('2');
+    const [noGracePeriod, setNoGracePeriod] = useState(false);
+    const [graceInterest, setGraceInterest] = useState('accumulate');
+    const [results, setResults] = useState(null);
+    const [error, setError] = useState('');
+
+    useEffect(() => {
+        if (noGracePeriod) {
+            setGraceYears('0');
+        }
+    }, [noGracePeriod]);
+
+    useEffect(() => {
+        const numGrace = parseInt(graceYears, 10);
+        const numTotal = parseInt(totalYears, 10);
+        if (!isNaN(numGrace) && !isNaN(numTotal) && numGrace >= numTotal) {
+            setError('A carência não pode ser maior ou igual ao prazo total.');
+        } else {
+            setError('');
+        }
+    }, [graceYears, totalYears]);
+    
+    const calculation = useMemo(() => {
+        const principal = parseCurrency(loanAmount);
+        const rate = parseFloat(annualRate) / 100;
+        const numTotalYears = parseInt(totalYears, 10);
+        const numGraceYears = noGracePeriod ? 0 : parseInt(graceYears, 10);
+
+        if (!principal || isNaN(rate) || isNaN(numTotalYears) || isNaN(numGraceYears) || rate <= 0 || numTotalYears <= 0 || numGraceYears < 0 || numGraceYears >= numTotalYears) {
+            return null;
+        }
+
+        let tableData = [];
+        let principalAfterGrace = principal;
+        let currentBalance = principal;
+        let totalInterestPaid = 0;
+
+        // Grace Period
+        for (let i = 1; i <= numGraceYears; i++) {
+            const interestForYear = currentBalance * rate;
+            let paymentForYear = 0;
+            if (graceInterest === 'pay_annually') {
+                paymentForYear = interestForYear;
+                totalInterestPaid += interestForYear;
+            } else { // accumulate
+                currentBalance += interestForYear;
+            }
+            tableData.push({
+                year: i,
+                isGrace: true,
+                payment: paymentForYear,
+                principal: 0,
+                interest: interestForYear,
+                balance: currentBalance,
+            });
+        }
+        principalAfterGrace = currentBalance;
+
+        // Amortization Period
+        const amortizationYears = numTotalYears - numGraceYears;
+        let annualPayment = 0;
+
+        if (amortizationYears > 0) {
+            const factor = Math.pow(1 + rate, amortizationYears);
+            annualPayment = principalAfterGrace * (rate * factor) / (factor - 1);
+
+            for (let i = 1; i <= amortizationYears; i++) {
+                const year = numGraceYears + i;
+                const interestComponent = currentBalance * rate;
+                const principalComponent = annualPayment - interestComponent;
+                currentBalance -= principalComponent;
+                totalInterestPaid += interestComponent;
+                tableData.push({
+                    year: year,
+                    isGrace: false,
+                    payment: annualPayment,
+                    principal: principalComponent,
+                    interest: interestComponent,
+                    balance: Math.abs(currentBalance),
+                });
+            }
+        }
+        
+        const totalPaid = principal + totalInterestPaid;
+        
+        return {
+            principal,
+            annualRate: rate,
+            totalYears: numTotalYears,
+            graceYears: numGraceYears,
+            principalAfterGrace,
+            annualPayment,
+            totalPaid,
+            totalInterest: totalInterestPaid,
+            tableData
+        };
+    }, [loanAmount, annualRate, totalYears, graceYears, noGracePeriod, graceInterest]);
+
+    const handleCalculate = () => {
+        if (error) return;
+        setResults(calculation);
+    };
+
+    const handleSave = () => {
+        if (results) {
+            onSave({
+                type: 'ruralCredit',
+                ...results
+            });
+        }
+    };
+    
+    return (
+        <div className="calculator-container">
+            <div className="calculator-layout">
+                <div className="form-section">
+                    <h3>Simulador de Crédito Rural</h3>
+                    <div className="form-group">
+                        <label>Valor do Financiamento (R$)</label>
+                        <input type="text" value={loanAmount} onChange={handleCurrencyChange(setLoanAmount)} />
+                    </div>
+                    <div className="form-group">
+                        <label>Taxa de Juros Anual (%)</label>
+                        <input type="number" value={annualRate} onChange={e => setAnnualRate(e.target.value)} />
+                    </div>
+                    <div className="form-group">
+                        <label>Prazo Total (anos)</label>
+                        <input type="number" value={totalYears} onChange={e => setTotalYears(e.target.value)} />
+                    </div>
+                    
+                    <div className="form-group-toggle">
+                        <input type="checkbox" id="noGrace" checked={noGracePeriod} onChange={e => setNoGracePeriod(e.target.checked)} />
+                        <label htmlFor="noGrace" style={{marginBottom: 0}}>Sem carência</label>
+                    </div>
+
+                    {!noGracePeriod && (
+                        <>
+                             <div className="form-group">
+                                <label>Prazo de Carência (anos)</label>
+                                <input type="number" value={graceYears} onChange={e => setGraceYears(e.target.value)} disabled={noGracePeriod} />
+                            </div>
+                             <div className="form-group">
+                                <label>
+                                    Amortização dos Juros na Carência
+                                     <Tooltip text="Escolha como os juros serão tratados durante a carência. 'Acumular' adiciona os juros ao saldo devedor. 'Pagar anualmente' exige o pagamento dos juros a cada ano.">
+                                        <span className="tooltip-icon">?</span>
+                                    </Tooltip>
+                                </label>
+                                <select value={graceInterest} onChange={e => setGraceInterest(e.target.value)} disabled={noGracePeriod}>
+                                    <option value="accumulate">Acumular (juros capitalizados)</option>
+                                    <option value="pay_annually">Pagar anualmente</option>
+                                </select>
+                            </div>
+                        </>
+                    )}
+                    {error && <p style={{ color: 'var(--danger-color)', textAlign: 'center', marginBottom: '15px' }}>{error}</p>}
+                    <button className="btn" onClick={handleCalculate} disabled={!!error}>Calcular</button>
+                    {results && <button className="btn btn-save" onClick={handleSave}>Salvar Simulação</button>}
+                </div>
+                 <div className="results-section">
+                    <h3>Resultados da Simulação</h3>
+                     {results ? (
+                        <>
+                            <div className="results-summary">
+                                <div className="summary-item">
+                                    <h4>Parcela Anual (Pós-Carência)</h4>
+                                    <p>{formatCurrency(results.annualPayment)}</p>
+                                </div>
+                                <div className="summary-item">
+                                    <h4>Saldo Devedor Pós-Carência</h4>
+                                    <p>{formatCurrency(results.principalAfterGrace)}</p>
+                                </div>
+                                <div className="summary-item">
+                                    <h4>Total de Juros</h4>
+                                    <p className="negative">{formatCurrency(results.totalInterest)}</p>
+                                </div>
+                                <div className="summary-item">
+                                    <h4>Total Pago</h4>
+                                    <p>{formatCurrency(results.totalPaid)}</p>
+                                </div>
+                            </div>
+                            <h4 style={{marginTop: '30px', marginBottom: '10px'}}>Amortização Anual</h4>
+                            <div className="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Ano</th>
+                                            <th>Pagamento</th>
+                                            <th>Amortização</th>
+                                            <th>Juros</th>
+                                            <th>Saldo Devedor</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {results.tableData.map(row => (
+                                            <tr key={row.year}>
+                                                <td>{row.year}</td>
+                                                <td>{formatCurrency(row.payment)}</td>
+                                                <td>{formatCurrency(row.principal)}</td>
+                                                <td>{formatCurrency(row.interest)}</td>
+                                                <td>{formatCurrency(row.balance)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </>
+                    ) : (
+                        <NoResults message="Preencha os dados do financiamento para ver a simulação." />
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const ReceivablesDiscountSimulator = ({ onSave }) => {
+    const [receivables, setReceivables] = useState([]);
+    const [currentValue, setCurrentValue] = useState('');
+    const [currentDate, setCurrentDate] = useState('');
+    const [interestRate, setInterestRate] = useState('3.0');
+    const [tac, setTac] = useState('R$ 150,00');
+    const [results, setResults] = useState(null);
+    const [error, setError] = useState('');
+
+    const summary = useMemo(() => {
+        const total = receivables.reduce((acc, curr) => acc + curr.value, 0);
+        return { total: formatCurrency(total), count: receivables.length };
+    }, [receivables]);
+    
+    const handleAddReceivable = () => {
+        const value = parseCurrency(currentValue);
+        if (value <= 0) {
+            alert("O valor do recebível deve ser maior que zero.");
+            return;
+        }
+        if (!currentDate) {
+            alert("Por favor, selecione uma data de vencimento.");
+            return;
+        }
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const dueDate = new Date(currentDate + 'T00:00:00');
+        if (dueDate <= today) {
+            alert("A data de vencimento deve ser no futuro.");
+            return;
+        }
+        
+        setReceivables(prev => [...prev, { id: Date.now(), value, dateStr: currentDate }]);
+        setCurrentValue('');
+        setCurrentDate('');
+    };
+
+    const handleRemoveReceivable = (id) => {
+        setReceivables(prev => prev.filter(r => r.id !== id));
+    };
+
+    const calculation = useMemo(() => {
+        if (receivables.length === 0) return null;
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const parsedTac = parseCurrency(tac);
+        const monthlyRate = parseFloat(interestRate.replace(',', '.')) / 100;
+        
+        if (isNaN(monthlyRate) || monthlyRate <= 0) {
+             setError("Taxa de juros inválida.");
+             return null;
+        } else {
+            setError("");
+        }
+
+        const dailyRate = Math.pow(1 + monthlyRate, 1 / 30) - 1;
+
+        let totalGrossValue = 0;
+        let totalInterest = 0;
+        let totalDailyIOF = 0;
+        const details = [];
+
+        for (const receivable of receivables) {
+            const value = receivable.value;
+            const dueDate = new Date(receivable.dateStr + 'T00:00:00');
+            const diffTime = dueDate.getTime() - today.getTime();
+            const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (days <= 0) continue;
+
+            const interest = value * (Math.pow(1 + dailyRate, days) - 1);
+            const dailyIOF = value * 0.000082 * days;
+
+            totalGrossValue += value;
+            totalInterest += interest;
+            totalDailyIOF += dailyIOF;
+            details.push({ ...receivable, days, interest, dailyIOF });
+        }
+
+        if (totalGrossValue === 0) return null;
+
+        const additionalIOF = totalGrossValue * 0.0038;
+        const totalIOF = totalDailyIOF + additionalIOF;
+        const totalDiscounts = totalInterest + totalIOF + parsedTac;
+        const netValue = totalGrossValue - totalDiscounts;
+
+        return {
+            totalGrossValue,
+            receivablesCount: receivables.length,
+            totalInterest,
+            totalIOF,
+            additionalIOF,
+            totalDailyIOF,
+            tac: parsedTac,
+            totalDiscounts,
+            netValue,
+            details
+        };
+    }, [receivables, interestRate, tac]);
+
+    const handleCalculate = () => {
+        if (!calculation) {
+             if (receivables.length === 0) alert("Adicione pelo menos um recebível para calcular.");
+             return;
+        }
+        setResults(calculation);
+    };
+
+    const handleSave = () => {
+        if (results) {
+            onSave({
+                type: 'receivablesDiscount',
+                ...results
+            });
+        }
+    };
+
+    return (
+        <div className="calculator-container">
+            <div className="calculator-layout">
+                <div className="form-section">
+                    <h3>Desconto de Recebíveis</h3>
+                    <div className="form-group inline">
+                        <div>
+                            <label>Valor do Título</label>
+                            <input type="text" value={currentValue} onChange={handleCurrencyChange(setCurrentValue)} />
+                        </div>
+                         <div>
+                            <label>Vencimento</label>
+                            <input type="date" value={currentDate} onChange={e => setCurrentDate(e.target.value)} />
+                        </div>
+                        <button className="btn" onClick={handleAddReceivable}>Add</button>
+                    </div>
+                    {receivables.length > 0 && (
+                        <>
+                            <div className="receivables-list">
+                                {receivables.map(r => (
+                                    <div key={r.id} className="receivable-item">
+                                        <div className="receivable-item-info">
+                                            <span>{formatCurrency(r.value)}</span>
+                                            <span>{new Date(r.dateStr + 'T00:00:00').toLocaleDateString('pt-BR')}</span>
+                                        </div>
+                                        <button onClick={() => handleRemoveReceivable(r.id)}>&times;</button>
+                                    </div>
+                                ))}
+                            </div>
+                            <p style={{textAlign: 'center', fontSize: '0.9rem', marginBottom: '20px'}}>
+                                <strong>{summary.count}</strong> títulos adicionados, totalizando <strong>{summary.total}</strong>
+                            </p>
+                        </>
+                    )}
+                     <div className="form-group">
+                        <label>Taxa de Juros Mensal (%)</label>
+                        <input type="text" value={interestRate} onChange={e => setInterestRate(e.target.value)} />
+                    </div>
+                    <div className="form-group">
+                        <label>
+                            TAC (Taxa de Abertura de Crédito)
+                             <Tooltip text="Custo fixo da operação, cobrado pela instituição financeira.">
+                                <span className="tooltip-icon">?</span>
+                            </Tooltip>
+                        </label>
+                        <input type="text" value={tac} onChange={handleCurrencyChange(setTac)} />
+                    </div>
+                    {error && <p style={{ color: 'var(--danger-color)', textAlign: 'center', marginBottom: '15px' }}>{error}</p>}
+                    <button className="btn" onClick={handleCalculate} disabled={receivables.length === 0}>Calcular</button>
+                    {results && <button className="btn btn-save" onClick={handleSave}>Salvar Simulação</button>}
+                </div>
+                 <div className="results-section">
+                    <h3>Resultados da Simulação</h3>
+                     {results ? (
+                        <>
+                            <div className="results-summary">
+                                <div className="summary-item">
+                                    <h4>Valor Líquido a Receber</h4>
+                                    <p className="positive">{formatCurrency(results.netValue)}</p>
+                                </div>
+                                <div className="summary-item">
+                                    <h4>Valor Bruto dos Títulos</h4>
+                                    <p>{formatCurrency(results.totalGrossValue)}</p>
+                                </div>
+                                <div className="summary-item">
+                                    <h4>Custo Total da Operação</h4>
+                                    <p className="negative">{formatCurrency(results.totalDiscounts)}</p>
+                                </div>
+                            </div>
+                             <div className="summary-item">
+                                <h4>Descontos Detalhados</h4>
+                                <div className="discount-breakdown">
+                                    <div><span>(+) Valor Bruto:</span> <span className="gross-value">{formatCurrency(results.totalGrossValue)}</span></div>
+                                    <div><span>(-) Juros:</span> <span className="discount-value">-{formatCurrency(results.totalInterest)}</span></div>
+                                    <div><span>(-) IOF Total:</span> <span className="discount-value">-{formatCurrency(results.totalIOF)}</span></div>
+                                    <div><span>(-) TAC:</span> <span className="discount-value">-{formatCurrency(results.tac)}</span></div>
+                                    <hr style={{border: 'none', borderTop: '1px solid var(--border-color)', margin: '5px 0'}} />
+                                    <div><span>(=) Valor Líquido:</span> <span className="net-value">{formatCurrency(results.netValue)}</span></div>
+                                </div>
+                            </div>
+
+                            <h4 style={{marginTop: '30px', marginBottom: '10px'}}>Detalhamento por Título</h4>
+                             <div className="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th style={{textAlign: 'left'}}>Valor</th>
+                                            <th>Vencimento</th>
+                                            <th>Dias</th>
+                                            <th>Juros</th>
+                                            <th>IOF</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {results.details.map(row => (
+                                            <tr key={row.id}>
+                                                <td style={{textAlign: 'left'}}>{formatCurrency(row.value)}</td>
+                                                <td>{new Date(row.dateStr + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
+                                                <td>{row.days}</td>
+                                                <td>{formatCurrency(row.interest)}</td>
+                                                <td>{formatCurrency(row.dailyIOF)}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </>
+                    ) : (
+                        <NoResults message="Adicione os recebíveis e os custos da operação para simular." />
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
 const HistoryModal = ({ history, onClose, onLoad, onClear }) => {
     return (
         <div className="modal-backdrop" onClick={onClose}>
@@ -1782,7 +2290,9 @@ const HistoryModal = ({ history, onClose, onLoad, onClear }) => {
                                             'loanPre': 'Empréstimo Prefixado',
                                             'loanPost': 'Empréstimo Pós-fixado',
                                             'scheduledApplication': 'Aplicação Programada',
-                                            'competitorRate': 'Apuração de Taxa'
+                                            'competitorRate': 'Apuração de Taxa',
+                                            'ruralCredit': 'Crédito Rural',
+                                            'receivablesDiscount': 'Desconto de Recebíveis',
                                         }[item.type] || 'Simulação'
                                     }</h4>
                                     <span>{new Date(item.id).toLocaleString('pt-BR')}</span>
@@ -1792,6 +2302,8 @@ const HistoryModal = ({ history, onClose, onLoad, onClear }) => {
                                     {(item.type === 'loanPre' || item.type === 'loanPost') && `Empréstimo de ${formatCurrency(item.principal)} em ${item.numMonths} meses (${item.system.toUpperCase()}).`}
                                     {item.type === 'scheduledApplication' && `Aportes de ${formatCurrency(item.monthlyAmount)} por ${item.numMonths} meses.`}
                                     {item.type === 'competitorRate' && `Taxa apurada para empréstimo de ${formatCurrency(item.loanAmount)}.`}
+                                    {item.type === 'ruralCredit' && `Financiamento de ${formatCurrency(item.principal)} por ${item.totalYears} anos.`}
+                                    {item.type === 'receivablesDiscount' && `Antecipação de ${item.receivablesCount} títulos no valor de ${formatCurrency(item.totalGrossValue)}.`}
                                 </p>
                             </div>
                         ))}
@@ -1819,6 +2331,11 @@ const ComparisonTool = ({ history, onClose }) => {
             return history.filter(sim => loanTypes.includes(sim.type));
         }
         
+        // Prevent comparison of rural credit with other types for now
+        if (firstSelected.type === 'ruralCredit') {
+            return history.filter(sim => sim.type === 'ruralCredit');
+        }
+
         return history.filter(sim => sim.type === firstSelected.type);
     };
 
@@ -1999,7 +2516,8 @@ const ComparisonTool = ({ history, onClose }) => {
                                                 'loanPre': 'Empréstimo Prefixado',
                                                 'loanPost': 'Empréstimo Pós-fixado',
                                                 'scheduledApplication': 'Aplicação Programada',
-                                                'competitorRate': 'Apuração de Taxa'
+                                                'competitorRate': 'Apuração de Taxa',
+                                                'ruralCredit': 'Crédito Rural',
                                             }[sim.type]
                                         }</strong>
                                         <span>{new Date(sim.id).toLocaleString('pt-BR')}</span>
@@ -2035,11 +2553,12 @@ const MainMenu = ({ setView }) => {
                 <FeatureCard icon="💰" title="Simular Investimento" description="Compare a rentabilidade de LCA/LCI e CDB/RDC." onClick={() => setView('investment')} />
                 <FeatureCard icon="💸" title="Empréstimo Prefixado" description="Calcule empréstimos com taxas de juros fixas." onClick={() => setView('loanPre')} />
                 <FeatureCard icon="📈" title="Empréstimo Pós-fixado" description="Simule empréstimos atrelados ao CDI." onClick={() => setView('loanPost')} />
+                <FeatureCard icon="🧾" title="Desconto de Recebíveis" description="Simule a antecipação de boletos e cheques." onClick={() => setView('receivablesDiscount')} />
+                <FeatureCard icon="🚜" title="Crédito Rural" description="Simule financiamentos com carência e pagamentos anuais." onClick={() => setView('ruralCredit')} />
                 <FeatureCard icon="🏦" title="Taxa do Concorrente" description="Descubra a taxa de juros de um empréstimo." onClick={() => setView('competitorRate')} />
                 <FeatureCard icon="🗓️" title="Aplicação Programada" description="Simule o acúmulo de patrimônio com aportes mensais." onClick={() => setView('scheduledApplication')} />
                 <FeatureCard icon="🗂️" title="Histórico" description="Veja e compare suas simulações salvas." onClick={() => setView('history')} />
-                <FeatureCard icon="⚙️" title="Configurações" description="Ajuste as preferências do aplicativo." onClick={() => setView('settings')} />
-                 <FeatureCard icon="🔍" title="Comparador" description="Compare lado a lado duas simulações salvas." onClick={() => setView('comparison')} />
+                <FeatureCard icon="🔍" title="Comparador" description="Compare lado a lado duas simulações salvas." onClick={() => setView('comparison')} />
             </div>
         </>
     );
@@ -2131,6 +2650,10 @@ const App = () => {
                 return <ScheduledApplicationCalculator onSave={handleSaveSimulation} cdiRate={cdiRate} />;
              case 'competitorRate':
                 return <CompetitorRateFinder onSave={handleSaveSimulation} />;
+             case 'ruralCredit':
+                return <RuralCreditSimulator onSave={handleSaveSimulation} />;
+            case 'receivablesDiscount':
+                return <ReceivablesDiscountSimulator onSave={handleSaveSimulation} />;
             case 'main':
             default:
                 return <MainMenu setView={setCurrentView} />;
