@@ -1245,51 +1245,64 @@ const getIncomeTaxRate = (days) => {
 
 // --- PDF EXPORT ---
 const exportToPDF = (simulationType, data) => {
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.width;
+    console.log('[PDF Export Global] Iniciando exportação de:', simulationType);
     
-    doc.setFontSize(18);
-    doc.setTextColor(0, 90, 156);
-    doc.text('Salva Bancário 2.0', pageWidth / 2, 20, { align: 'center' });
-    
-    doc.setFontSize(14);
-    doc.setTextColor(0, 0, 0);
-    doc.text(simulationType, pageWidth / 2, 30, { align: 'center' });
-    
-    doc.setFontSize(10);
-    doc.setTextColor(102, 102, 102);
-    doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, 38, { align: 'center' });
-    
-    let yPosition = 50;
-    
-    if (data.summary) {
-        doc.setFontSize(12);
+    try {
+        console.log('[PDF Export Global] Criando documento jsPDF...');
+        const doc = new jsPDF();
+        const pageWidth = doc.internal.pageSize.width;
+        
+        console.log('[PDF Export Global] Adicionando cabeçalho...');
+        doc.setFontSize(18);
         doc.setTextColor(0, 90, 156);
-        doc.text('Resumo:', 14, yPosition);
-        yPosition += 8;
+        doc.text('Salva Bancário 2.0', pageWidth / 2, 20, { align: 'center' });
+        
+        doc.setFontSize(14);
+        doc.setTextColor(0, 0, 0);
+        doc.text(simulationType, pageWidth / 2, 30, { align: 'center' });
         
         doc.setFontSize(10);
-        doc.setTextColor(0, 0, 0);
-        data.summary.forEach(item => {
-            doc.text(`${item.label}: ${item.value}`, 20, yPosition);
-            yPosition += 6;
-        });
-        yPosition += 5;
+        doc.setTextColor(102, 102, 102);
+        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, pageWidth / 2, 38, { align: 'center' });
+        
+        let yPosition = 50;
+        
+        if (data.summary) {
+            console.log('[PDF Export Global] Adicionando resumo...');
+            doc.setFontSize(12);
+            doc.setTextColor(0, 90, 156);
+            doc.text('Resumo:', 14, yPosition);
+            yPosition += 8;
+            
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            data.summary.forEach(item => {
+                doc.text(`${item.label}: ${item.value}`, 20, yPosition);
+                yPosition += 6;
+            });
+            yPosition += 5;
+        }
+        
+        if (data.table) {
+            console.log('[PDF Export Global] Adicionando tabela...');
+            autoTable(doc, {
+                startY: yPosition,
+                head: [data.table.headers],
+                body: data.table.rows,
+                theme: 'grid',
+                headStyles: { fillColor: [0, 90, 156] },
+                styles: { fontSize: 9 },
+            });
+        }
+        
+        console.log('[PDF Export Global] Salvando arquivo...');
+        doc.save(`${simulationType.replace(/ /g, '_')}_${Date.now()}.pdf`);
+        console.log('[PDF Export Global] PDF exportado com sucesso!');
+        toast.success('PDF exportado com sucesso!');
+    } catch (error) {
+        console.error('[PDF Export Global] Erro ao exportar PDF:', error);
+        toast.error('Erro ao exportar PDF: ' + error.message);
     }
-    
-    if (data.table) {
-        autoTable(doc, {
-            startY: yPosition,
-            head: [data.table.headers],
-            body: data.table.rows,
-            theme: 'grid',
-            headStyles: { fillColor: [0, 90, 156] },
-            styles: { fontSize: 9 },
-        });
-    }
-    
-    doc.save(`${simulationType.replace(/ /g, '_')}_${Date.now()}.pdf`);
-    toast.success('PDF exportado com sucesso!');
 };
 
 // --- SETTINGS & HOOKS ---
@@ -3476,63 +3489,76 @@ const InterestRateConverter = () => {
     };
 
     const exportToPDF = () => {
+        console.log('[PDF Export] Iniciando exportação...');
+        
         if (!results) {
             toast.error('Realize o cálculo primeiro.');
             return;
         }
 
-        const doc = new jsPDF();
+        try {
+            console.log('[PDF Export] Criando documento jsPDF...');
+            const doc = new jsPDF();
 
-        doc.setFontSize(16);
-        doc.text('Conversão de Taxas de Juros', 20, 20);
+            console.log('[PDF Export] Adicionando texto ao documento...');
+            doc.setFontSize(16);
+            doc.text('Conversão de Taxas de Juros', 20, 20);
 
-        const summary = [
-            { label: 'Taxa Original', value: `${rateInput}% ${periodOptions.find(p => p.value === fromPeriod)?.label || ''}` },
-            { label: 'Taxa Convertida (Composta)', value: `${formatPercentage(results.convertedCompound)} ${periodOptions.find(p => p.value === toPeriod)?.label || ''}` },
-            { label: 'Taxa Convertida (Simples)', value: `${formatPercentage(results.convertedSimple)} ${periodOptions.find(p => p.value === toPeriod)?.label || ''}` },
-            { label: '', value: '' },
-            { label: 'Taxa Diária', value: formatPercentage(results.dailyCompound) + ' a.d.' },
-            { label: 'Taxa Mensal', value: formatPercentage(results.monthlyCompound) + ' a.m.' },
-            { label: 'Taxa Anual', value: formatPercentage(results.yearlyCompound) + ' a.a.' },
-            { label: '', value: '' },
-            { label: 'Principal', value: formatCurrency(results.principalValue) },
-            { label: 'Prazo', value: `${results.numMonths} meses` },
-            { label: 'Montante Final (Composto)', value: formatCurrency(results.compoundFinal) },
-            { label: 'Juros Compostos', value: formatCurrency(results.compoundInterest) },
-            { label: 'Montante Final (Simples)', value: formatCurrency(results.simpleFinal) },
-            { label: 'Juros Simples', value: formatCurrency(results.simpleInterest) },
-            { label: 'Diferença', value: formatCurrency(results.difference) }
-        ];
+            const summary = [
+                { label: 'Taxa Original', value: `${rateInput}% ${periodOptions.find(p => p.value === fromPeriod)?.label || ''}` },
+                { label: 'Taxa Convertida (Composta)', value: `${formatPercentage(results.convertedCompound)} ${periodOptions.find(p => p.value === toPeriod)?.label || ''}` },
+                { label: 'Taxa Convertida (Simples)', value: `${formatPercentage(results.convertedSimple)} ${periodOptions.find(p => p.value === toPeriod)?.label || ''}` },
+                { label: '', value: '' },
+                { label: 'Taxa Diária', value: formatPercentage(results.dailyCompound) + ' a.d.' },
+                { label: 'Taxa Mensal', value: formatPercentage(results.monthlyCompound) + ' a.m.' },
+                { label: 'Taxa Anual', value: formatPercentage(results.yearlyCompound) + ' a.a.' },
+                { label: '', value: '' },
+                { label: 'Principal', value: formatCurrency(results.principalValue) },
+                { label: 'Prazo', value: `${results.numMonths} meses` },
+                { label: 'Montante Final (Composto)', value: formatCurrency(results.compoundFinal) },
+                { label: 'Juros Compostos', value: formatCurrency(results.compoundInterest) },
+                { label: 'Montante Final (Simples)', value: formatCurrency(results.simpleFinal) },
+                { label: 'Juros Simples', value: formatCurrency(results.simpleInterest) },
+                { label: 'Diferença', value: formatCurrency(results.difference) }
+            ];
 
-        let yPos = 30;
-        doc.setFontSize(10);
-        summary.forEach(item => {
-            if (item.label === '') {
-                yPos += 3;
-            } else {
-                doc.text(`${item.label}: ${item.value}`, 20, yPos);
-                yPos += 6;
-            }
-        });
-
-        if (results.evolutionData.length <= 50) {
-            autoTable(doc, {
-                startY: yPos + 5,
-                head: [['Mês', 'Composto', 'Simples', 'Diferença']],
-                body: results.evolutionData.map(row => [
-                    row.month,
-                    formatCurrency(row.composto),
-                    formatCurrency(row.simples),
-                    formatCurrency(row.diferenca)
-                ]),
-                theme: 'grid',
-                headStyles: { fillColor: [0, 90, 156] },
-                styles: { fontSize: 8 }
+            console.log('[PDF Export] Adicionando resumo...');
+            let yPos = 30;
+            doc.setFontSize(10);
+            summary.forEach(item => {
+                if (item.label === '') {
+                    yPos += 3;
+                } else {
+                    doc.text(`${item.label}: ${item.value}`, 20, yPos);
+                    yPos += 6;
+                }
             });
-        }
 
-        doc.save(`Conversao_Taxas_${Date.now()}.pdf`);
-        toast.success('PDF exportado com sucesso!');
+            if (results.evolutionData.length <= 50) {
+                console.log('[PDF Export] Adicionando tabela...');
+                autoTable(doc, {
+                    startY: yPos + 5,
+                    head: [['Mês', 'Composto', 'Simples', 'Diferença']],
+                    body: results.evolutionData.map(row => [
+                        row.month,
+                        formatCurrency(row.composto),
+                        formatCurrency(row.simples),
+                        formatCurrency(row.diferenca)
+                    ]),
+                    theme: 'grid',
+                    headStyles: { fillColor: [0, 90, 156] },
+                    styles: { fontSize: 8 }
+                });
+            }
+
+            console.log('[PDF Export] Salvando arquivo...');
+            doc.save(`Conversao_Taxas_${Date.now()}.pdf`);
+            console.log('[PDF Export] PDF exportado com sucesso!');
+            toast.success('PDF exportado com sucesso!');
+        } catch (error) {
+            console.error('[PDF Export] Erro ao exportar PDF:', error);
+            toast.error('Erro ao exportar PDF: ' + error.message);
+        }
     };
 
     return (
