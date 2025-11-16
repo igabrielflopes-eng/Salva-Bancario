@@ -1393,10 +1393,12 @@ const FeatureCard = ({ icon, title, description, onClick }) => (
 );
 
 const InvestmentSimulator = ({ onSave, cdiRate }) => {
+    const { settings } = useSettings();
+    
     const [initialValue, setInitialValue] = useState('R$ 10.000,00');
     const [months, setMonths] = useState('12');
-    const [lcaProfitability, setLcaProfitability] = useState('98');
-    const [cdbProfitability, setCdbProfitability] = useState('110');
+    const [lcaProfitability, setLcaProfitability] = useState((settings.lcaPercentCDI * 100).toFixed(0));
+    const [cdbProfitability, setCdbProfitability] = useState((settings.cdbPercentCDI * 100).toFixed(0));
     
     const [results, setResults] = useState(null);
 
@@ -1647,15 +1649,17 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
 };
 
 const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
+    const { settings } = useSettings();
+    
     const [loanAmount, setLoanAmount] = useState('R$ 50.000,00');
     const [months, setMonths] = useState('36');
     const [customMonths, setCustomMonths] = useState('');
     const [isCustomMonths, setIsCustomMonths] = useState(false);
-    const [interestRate, setInterestRate] = useState('2.5');
+    const [interestRate, setInterestRate] = useState((settings.loanRate * 100).toFixed(2));
     const [fixedSpread, setFixedSpread] = useState('0.5');
     const [system, setSystem] = useState('price');
-    const [iof, setIof] = useState('0.38');
-    const [tac, setTac] = useState('R$ 0,00');
+    const [iof, setIof] = useState((settings.iofRate * 100).toFixed(2));
+    const [tac, setTac] = useState(formatCurrency(settings.tacLoan));
     const [financeIOF, setFinanceIOF] = useState(false);
     const [results, setResults] = useState(null);
     
@@ -2620,11 +2624,13 @@ const RuralCreditSimulator = ({ onSave }) => {
 };
 
 const ReceivablesDiscountSimulator = ({ onSave }) => {
+    const { settings } = useSettings();
+    
     const [receivables, setReceivables] = useState([]);
     const [currentValue, setCurrentValue] = useState('');
     const [currentDate, setCurrentDate] = useState('');
-    const [interestRate, setInterestRate] = useState('3.0');
-    const [tac, setTac] = useState('R$ 150,00');
+    const [interestRate, setInterestRate] = useState((settings.tdRate * 100).toFixed(2));
+    const [tac, setTac] = useState(formatCurrency(settings.tacTD));
     const [results, setResults] = useState(null);
     const [error, setError] = useState('');
 
