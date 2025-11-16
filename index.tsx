@@ -4883,6 +4883,7 @@ const MainMenu = ({ setView }) => {
                 <FeatureCard icon="🧾" title="Desconto de Recebíveis" description="Simule a antecipação de boletos e cheques." onClick={() => setView('receivablesDiscount')} />
                 <FeatureCard icon="💸" title="Empréstimo Prefixado" description="Calcule empréstimos com taxas de juros fixas." onClick={() => setView('loanPre')} />
                 <FeatureCard icon="📈" title="Empréstimo Pós-fixado" description="Simule empréstimos atrelados ao CDI." onClick={() => setView('loanPost')} />
+                <FeatureCard icon="🌾" title="Crédito Rural" description="Simule financiamentos rurais com carência e sistemas SAC/PRICE." onClick={() => setView('ruralCredit')} />
                 <FeatureCard icon="🏦" title="Taxa do Concorrente" description="Descubra a taxa de juros de um empréstimo." onClick={() => setView('competitorRate')} />
                 <FeatureCard icon="🔄" title="Conversão de Taxas" description="Capitalize e descapitalize taxas entre diferentes períodos." onClick={() => setView('rateConverter')} />
                 <FeatureCard icon="🔍" title="Comparador" description="Compare lado a lado duas simulações salvas." onClick={() => setView('comparison')} />
