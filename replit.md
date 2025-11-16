@@ -10,7 +10,9 @@
 - **Build Tool**: Vite 6.2.0
 - **Language**: TypeScript
 - **Styling**: CSS-in-JS (embedded in index.tsx)
-- **AI Integration**: Google Gemini API (for AI-powered features)
+- **Charts**: Recharts (interactive data visualization)
+- **Notifications**: React Hot Toast (modern toast notifications)
+- **PDF Export**: jsPDF with jspdf-autotable (generate PDF reports)
 
 ### Project Structure
 ```
@@ -60,11 +62,31 @@ npm run preview
 ```
 
 ## Recent Changes (November 16, 2025)
+
+### Initial Setup
 - Configured Vite to run on port 5000 for Replit compatibility
 - Added HMR (Hot Module Replacement) configuration for webview
 - Set up workflow for automatic server restart
 - Configured deployment settings
-- Added GEMINI_API_KEY as environment secret
+
+### UX Improvements (Latest Session)
+- **Toast Notifications**: Replaced all browser alerts with modern toast notifications using react-hot-toast
+  - Custom theming for dark/light modes
+  - Success, error, and info variants
+  - Non-blocking user experience
+- **Interactive Charts**: Added Recharts library with interactive line charts in Investment Simulator
+  - Visual comparison of LCA/LCI vs CDB/RDC evolution
+  - Responsive design with tooltips
+  - Theme-aware styling
+- **PDF Export**: Implemented PDF generation for simulation reports
+  - Professional formatting with jsPDF and jspdf-autotable
+  - Includes summary and detailed monthly tables
+  - Download feature with success feedback
+- **Visual Polish**: 
+  - Added loading states and fade-in animations
+  - Improved button layouts with btn-group styling
+  - Added icons to action buttons
+  - Enhanced overall user feedback
 
 ## Notes
 - The application stores simulation history in browser localStorage
