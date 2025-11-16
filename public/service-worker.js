@@ -7,7 +7,19 @@ const urlsToCache = [
   '/icon-512x512.png'
 ];
 
+const isDevelopment = () => {
+  return self.location.hostname === 'localhost' || 
+         self.location.hostname === '127.0.0.1' ||
+         self.location.hostname.includes('replit.dev');
+};
+
 self.addEventListener('install', (event) => {
+  if (isDevelopment()) {
+    console.log('Service Worker: Ambiente de desenvolvimento detectado - cache desabilitado');
+    self.skipWaiting();
+    return;
+  }
+  
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
@@ -19,6 +31,21 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
+  if (isDevelopment()) {
+    event.waitUntil(
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cacheName) => {
+            console.log('Service Worker: Removendo cache de desenvolvimento:', cacheName);
+            return caches.delete(cacheName);
+          })
+        );
+      })
+    );
+    self.clients.claim();
+    return;
+  }
+  
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
@@ -35,6 +62,15 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  if (isDevelopment()) {
+    event.respondWith(
+      fetch(event.request).then((response) => {
+        return response;
+      })
+    );
+    return;
+  }
+  
   event.respondWith(
     caches.match(event.request)
       .then((response) => {

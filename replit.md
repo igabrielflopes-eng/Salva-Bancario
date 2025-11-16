@@ -62,6 +62,10 @@ The application uses a limited BACEN integration via the "Atualizar via BACEN" b
 
 **Expected values (November 2025):** SELIC ~15% a.a., CDI ~14.90% a.a., IPCA ~4.68%, USD/BRL ~5.80
 
+## Development Configuration
+- **Cache Disabled in Development**: Service Worker and Vite configured to bypass caching during development (localhost/Replit), enabling instant hot reload without manual cache clearing
+- **Production PWA Intact**: Offline-first caching remains active when published/deployed for full PWA functionality
+
 ## Recent Changes (November 16, 2025)
 - Added **Economic Indicators Dashboard** featuring 4 key Brazilian indicators: CDI, SELIC, IPCA, and Dólar/Real
 - Implemented hybrid approach for indicators: manual editing (offline-first) with limited automatic updates via BACEN API
@@ -78,3 +82,4 @@ The application uses a limited BACEN integration via the "Atualizar via BACEN" b
 - **Investment Simulator Enhancement**: Added toggle to choose between CDI projections (multi-year) or constant SELIC rate. UI labels now update dynamically based on selected rate type
 - **Scheduled Application Enhancement**: Added same CDI/SELIC toggle as Investment Simulator with dynamic labels and rate explanations
 - **Standardized Export Functions**: All 11 simulators now feature complete export capabilities (PDF, CSV/Excel, WhatsApp sharing) with consistent UI and data formatting across the application
+- **Development Cache Fix**: Configured Service Worker to detect development environment and bypass caching on localhost/Replit. Added HTTP no-cache headers to Vite dev server. No more Ctrl+Shift+Del needed - changes appear instantly during development while maintaining full PWA offline capabilities in production
