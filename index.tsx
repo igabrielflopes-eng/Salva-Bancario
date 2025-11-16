@@ -1670,6 +1670,9 @@ const annualToMonthly = (annualRate) => {
 
 const DEFAULT_SETTINGS = {
     cdiAnnual: 0.1490, // 14.90%
+    cdi2026: 0.1225, // 12.25% - Projeção Boletim Focus
+    cdi2027: 0.1050, // 10.50% - Projeção Boletim Focus
+    cdi2028: 0.1000, // 10.00% - Projeção Boletim Focus
     selicAnnual: 0.1500, // 15.00%
     loanRate: 0.025, // 2.5% a.m.
     iofRate: 0.0038, // 0.38% IOF Adicional
@@ -3610,6 +3613,9 @@ const SettingsMenu = () => {
     const { settings, updateSettings, resetToDefaults } = useSettings();
     
     const [cdiAnnualInput, setCdiAnnualInput] = useState((settings.cdiAnnual * 100).toFixed(2));
+    const [cdi2026Input, setCdi2026Input] = useState(((settings.cdi2026 || DEFAULT_SETTINGS.cdi2026) * 100).toFixed(2));
+    const [cdi2027Input, setCdi2027Input] = useState(((settings.cdi2027 || DEFAULT_SETTINGS.cdi2027) * 100).toFixed(2));
+    const [cdi2028Input, setCdi2028Input] = useState(((settings.cdi2028 || DEFAULT_SETTINGS.cdi2028) * 100).toFixed(2));
     const [selicAnnualInput, setSelicAnnualInput] = useState((settings.selicAnnual * 100).toFixed(2));
     const [loanRateInput, setLoanRateInput] = useState((settings.loanRate * 100).toFixed(2));
     const [iofRateInput, setIofRateInput] = useState((settings.iofRate * 100).toFixed(2));
@@ -3629,6 +3635,9 @@ const SettingsMenu = () => {
     const handleSave = () => {
         const newSettings = {
             cdiAnnual: parseFloat(cdiAnnualInput) / 100,
+            cdi2026: parseFloat(cdi2026Input) / 100,
+            cdi2027: parseFloat(cdi2027Input) / 100,
+            cdi2028: parseFloat(cdi2028Input) / 100,
             selicAnnual: parseFloat(selicAnnualInput) / 100,
             loanRate: parseFloat(loanRateInput) / 100,
             iofRate: parseFloat(iofRateInput) / 100,
@@ -3648,6 +3657,9 @@ const SettingsMenu = () => {
         if (confirm('Tem certeza que deseja restaurar todas as configurações para os valores padrão?')) {
             resetToDefaults();
             setCdiAnnualInput((DEFAULT_SETTINGS.cdiAnnual * 100).toFixed(2));
+            setCdi2026Input((DEFAULT_SETTINGS.cdi2026 * 100).toFixed(2));
+            setCdi2027Input((DEFAULT_SETTINGS.cdi2027 * 100).toFixed(2));
+            setCdi2028Input((DEFAULT_SETTINGS.cdi2028 * 100).toFixed(2));
             setSelicAnnualInput((DEFAULT_SETTINGS.selicAnnual * 100).toFixed(2));
             setLoanRateInput((DEFAULT_SETTINGS.loanRate * 100).toFixed(2));
             setIofRateInput((DEFAULT_SETTINGS.iofRate * 100).toFixed(2));
@@ -3672,8 +3684,8 @@ const SettingsMenu = () => {
                     
                     <div className="form-group">
                         <label>
-                            CDI Anual (%)
-                            <Tooltip text="Taxa básica de juros interbancários. Usado como referência para investimentos e empréstimos pós-fixados.">
+                            CDI Atual (%)
+                            <Tooltip text="Taxa CDI atual. Usado como referência para investimentos e empréstimos pós-fixados de curto prazo.">
                                 <span className="tooltip-icon">?</span>
                             </Tooltip>
                         </label>
@@ -3687,6 +3699,51 @@ const SettingsMenu = () => {
                         <p style={{fontSize: '0.8rem', color: 'var(--text-secondary-color)', textAlign: 'center', marginTop: '5px'}}>
                             Mensal: {formatPercentage(cdiMonthly)} a.m. | Anual: {cdiAnnualInput}% a.a.
                         </p>
+                    </div>
+
+                    <div style={{marginTop: '15px', padding: '15px', backgroundColor: 'var(--card-bg)', borderRadius: '8px', border: '1px solid var(--border-color)'}}>
+                        <h5 style={{marginTop: '0', marginBottom: '15px', color: 'var(--primary-color)', display: 'flex', alignItems: 'center', gap: '8px'}}>
+                            📈 Projeções CDI Multi-Ano
+                            <Tooltip text="Projeções baseadas no Boletim Focus do Banco Central. Usadas em simulações de longo prazo para maior precisão.">
+                                <span className="tooltip-icon">?</span>
+                            </Tooltip>
+                        </h5>
+                        <p style={{fontSize: '0.85rem', color: 'var(--text-secondary-color)', marginBottom: '15px', fontStyle: 'italic'}}>
+                            Fonte: Boletim Focus - Banco Central do Brasil
+                        </p>
+
+                        <div className="form-group">
+                            <label>CDI 2026 (%)</label>
+                            <input 
+                                type="number" 
+                                value={cdi2026Input} 
+                                onChange={e => setCdi2026Input(e.target.value)}
+                                step="0.01"
+                                inputMode="decimal"
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>CDI 2027 (%)</label>
+                            <input 
+                                type="number" 
+                                value={cdi2027Input} 
+                                onChange={e => setCdi2027Input(e.target.value)}
+                                step="0.01"
+                                inputMode="decimal"
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label>CDI 2028 (%)</label>
+                            <input 
+                                type="number" 
+                                value={cdi2028Input} 
+                                onChange={e => setCdi2028Input(e.target.value)}
+                                step="0.01"
+                                inputMode="decimal"
+                            />
+                        </div>
                     </div>
 
                     <div className="form-group">
