@@ -1494,17 +1494,15 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
     const [loanAmount, setLoanAmount] = useState('R$ 50.000,00');
     const [months, setMonths] = useState('36');
     const [interestRate, setInterestRate] = useState('2.5');
-    const [cdiPercent, setCdiPercent] = useState('150');
     const [fixedSpread, setFixedSpread] = useState('0.5');
     const [system, setSystem] = useState('price');
     const [results, setResults] = useState(null);
 
     const effectiveInterestRate = useMemo(() => {
         if (!isPostFixed) return parseFloat(interestRate) / 100;
-        const cdiPart = cdiRate * (parseFloat(cdiPercent) / 100);
         const fixedPart = parseFloat(fixedSpread) / 100;
-        return cdiPart + fixedPart;
-    }, [isPostFixed, interestRate, cdiPercent, fixedSpread, cdiRate]);
+        return cdiRate + fixedPart;
+    }, [isPostFixed, interestRate, fixedSpread, cdiRate]);
 
     const calculation = useMemo(() => {
         const principal = parseCurrency(loanAmount);
@@ -1569,7 +1567,6 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
             monthlyRate,
             system,
             isPostFixed,
-            cdiPercent: isPostFixed ? parseFloat(cdiPercent) : null,
             fixedSpread: isPostFixed ? parseFloat(fixedSpread) : null,
             cdiRateSnapshot: isPostFixed ? cdiRate : null,
             firstPayment: tableData[0]?.payment || 0,
@@ -1578,7 +1575,7 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
             totalInterest,
             tableData,
         };
-    }, [loanAmount, months, system, effectiveInterestRate, isPostFixed, cdiPercent, fixedSpread, cdiRate]);
+    }, [loanAmount, months, system, effectiveInterestRate, isPostFixed, fixedSpread, cdiRate]);
 
     const handleCalculate = () => {
         setResults(calculation);
@@ -1609,13 +1606,18 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
                     {isPostFixed ? (
                         <>
                            <div className="form-group">
-                                <label>Taxa de Juros Composta</label>
-                                <div style={{ display: 'flex', gap: '10px' }}>
-                                    <input type="number" value={cdiPercent} onChange={e => setCdiPercent(e.target.value)} placeholder="% CDI" />
-                                    <span>+</span>
-                                    <input type="number" value={fixedSpread} onChange={e => setFixedSpread(e.target.value)} placeholder="% Fixo" />
-                                </div>
-                                 <p style={{fontSize: '0.8rem', color: 'var(--text-secondary-color)', textAlign: 'center', marginTop: '5px'}}>CDI base: {formatPercentage(cdiRate)} a.m.</p>
+                                <label htmlFor="fixedSpread">Taxa Fixa Adicional (%)</label>
+                                <input 
+                                    type="number" 
+                                    id="fixedSpread"
+                                    value={fixedSpread} 
+                                    onChange={e => setFixedSpread(e.target.value)} 
+                                    placeholder="0.5" 
+                                    step="0.01"
+                                />
+                                <p style={{fontSize: '0.8rem', color: 'var(--text-secondary-color)', textAlign: 'center', marginTop: '5px'}}>
+                                    Taxa efetiva: {formatPercentage(cdiRate)} (CDI) + {fixedSpread}% = {formatPercentage(cdiRate + parseFloat(fixedSpread)/100)} a.m.
+                                </p>
                             </div>
                         </>
                     ) : (
