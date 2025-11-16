@@ -88,7 +88,33 @@ npm run preview
   - Added icons to action buttons
   - Enhanced overall user feedback
 
-### Current Session - Taxa Final Líquida
+### Current Session - Quick Selection & SAC for Rural Credit
+- **Quick-Select Loan Term Buttons**:
+  - Added preset buttons to Loan Calculators (Prefixado and Pós-fixado)
+  - Buttons: 12, 24, 36, 48, 60 months + "Personalizado" (custom)
+  - Clicking preset auto-fills the months field
+  - "Personalizado" reveals input field for custom values
+  - Improved UX for common loan terms
+  
+- **SAC Amortization for Rural Credit**:
+  - Added "Sistema de Amortização" field to Rural Credit Simulator
+  - Two options:
+    - **PRICE**: Fixed annual payments (original method)
+    - **SAC**: Constant principal amortization, decreasing payments
+  - SAC calculation:
+    - Fixed principal amount per year
+    - Decreasing interest (based on remaining balance)
+    - Results show "First Payment" and "Last Payment"
+  - UI and PDF export updated to reflect selected system
+  - Proper handling of grace periods for both systems
+
+- **PDF Export Fix**:
+  - Fixed `doc.autoTable is not a function` error
+  - Changed import from `import jsPDF` to `import { jsPDF }`
+  - Changed autoTable import to standalone function: `import autoTable from 'jspdf-autotable'`
+  - Updated call from `doc.autoTable()` to `autoTable(doc, options)`
+
+### Previous Session - Taxa Final Líquida
 - **Taxa de Retorno em Percentual**:
   - Adicionado campo "Taxa Final Líquida" no Simulador de Investimento
   - Exibe o retorno percentual líquido para LCA/LCI e CDB/RDC
@@ -137,4 +163,4 @@ npm run preview
 - The application stores simulation history in browser localStorage
 - Theme preference is also persisted in localStorage
 - CDI rate is fetched dynamically (used in various calculations)
-- All components are currently in a single file (index.tsx) - approximately 2,682 lines
+- All components are currently in a single file (index.tsx) - approximately 3,237 lines

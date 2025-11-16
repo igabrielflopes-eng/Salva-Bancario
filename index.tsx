@@ -3,8 +3,8 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, Legend, ResponsiveContainer } from 'recharts';
 import toast, { Toaster } from 'react-hot-toast';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const styles = `
   :root { /* Light Theme */
@@ -1272,7 +1272,7 @@ const exportToPDF = (simulationType, data) => {
     }
     
     if (data.table) {
-        (doc as any).autoTable({
+        autoTable(doc, {
             startY: yPosition,
             head: [data.table.headers],
             body: data.table.rows,
