@@ -18,6 +18,7 @@ I prefer iterative development, with clear communication before major changes ar
 - **PDF Export**: jsPDF with jspdf-autotable (for reports)
 
 ### Core Features
+- **Economic Indicators Dashboard**: Real-time view of 5 key Brazilian economic indicators (CDI, SELIC, IPCA, INCC, Dólar/Real) with optional automatic updates via Banco Central API.
 - **Investment Simulator**: Compare LCA/LCI vs. CDB/RDC with multi-year CDI projections and quick-period buttons (30d, 60d, 90d, 6m, 1a, 2a, custom).
 - **Loan Calculators**: Prefixado (fixed-rate) and Pós-fixado (CDI-linked with multi-year projections), with simplified IOF calculation (checkbox-based) and automatic TAC financing.
 - **Scheduled Application Calculator**: Simulate wealth accumulation with dynamic CDI projections for long-term planning.
@@ -26,11 +27,11 @@ I prefer iterative development, with clear communication before major changes ar
 - **History & Comparison Tools**: Save and compare simulations.
 - **Dark/Light Theme Toggle**: User-controlled theme.
 - **Interest Rate Converter**: Convert between periods and compare compound vs. simple interest.
-- **Global Settings Menu**: Configure default values for all calculators (e.g., CDI, SELIC, loan rates) including multi-year CDI projections based on Boletim Focus do BC (2026: 12.25%, 2027: 10.50%, 2028: 10%), persisted via `localStorage`.
+- **Global Settings Menu**: Configure default values for all calculators (e.g., CDI, SELIC, IPCA, INCC, Dólar, loan rates) including multi-year CDI projections based on Boletim Focus do BC (2026: 12.25%, 2027: 10.50%, 2028: 10%), persisted via `localStorage`.
 - **Progressive Web App (PWA)**: Installable, offline-first application with custom icons and a branded theme.
 - **Universal PDF Export**: Generate professional PDF reports for all simulators, optimized for Replit/iframe environments.
 - **Mobile Responsiveness**: Tables transform into responsive card layouts on small screens; graphs reposition for better UX flow.
-- **Menu Organization**: Cards organized in logical order - Investments, Loans, Tools, and Settings for intuitive navigation.
+- **Menu Organization**: Cards organized in logical order - Indicators, Investments, Loans, Tools, and Settings for intuitive navigation.
 
 ### PWA Implementation
 The application functions as a PWA, featuring:
@@ -45,6 +46,17 @@ The application functions as a PWA, featuring:
 
 ## External Dependencies
 - **Google Gemini API**: `GEMINI_API_KEY` (for AI features, though not explicitly detailed in functionality).
+- **Banco Central do Brasil API (BACEN)**: Optional integration for automatic updates of economic indicators (CDI, SELIC, IPCA, INCC). No API key required. Endpoints: https://api.bcb.gov.br/dados/serie/bcdata.sgs/{code}/dados
+- **AwesomeAPI**: Optional integration for USD/BRL exchange rate updates. Endpoint: https://economia.awesomeapi.com.br/last/USD-BRL
 - **Recharts**: For interactive data visualization.
 - **React Hot Toast**: For modern toast notifications.
 - **jsPDF** and **jspdf-autotable**: For generating PDF reports.
+
+## Recent Changes (November 16, 2025)
+- Added **Economic Indicators Dashboard** featuring 5 key Brazilian indicators: CDI, SELIC, IPCA, INCC, and Dólar/Real
+- Implemented hybrid approach for indicators: manual editing (offline-first) with optional automatic updates via BACEN API
+- Added "Atualizar via BACEN" button in Settings to fetch latest indicator values from official sources
+- Extended DEFAULT_SETTINGS to include `ipca`, `incc`, `usdBrl`, and `indicatorsLastUpdated` fields
+- Created dedicated EconomicIndicators component with color-coded indicator cards
+- Positioned "Indicadores Econômicos" card as first item in main menu for easy access
+- Maintained offline-first architecture while allowing opt-in API usage for real-time data

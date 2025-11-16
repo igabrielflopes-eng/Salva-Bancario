@@ -1690,6 +1690,9 @@ const DEFAULT_SETTINGS = {
     cdi2027: 0.1050, // 10.50% - Projeção Boletim Focus
     cdi2028: 0.1000, // 10.00% - Projeção Boletim Focus
     selicAnnual: 0.1500, // 15.00%
+    ipca: 0.0482, // 4.82% a.a.
+    incc: 0.0395, // 3.95% a.a.
+    usdBrl: 5.85, // R$ 5,85
     loanRate: 0.025, // 2.5% a.m.
     iofRate: 0.0038, // 0.38% IOF Adicional
     iofDiarioRate: 0.000082, // 0.0082% IOF Diário
@@ -1700,6 +1703,7 @@ const DEFAULT_SETTINGS = {
     tacTD: 150, // R$ 150,00
     companyName: '', // Nome da Empresa para PDFs
     logoUrl: '', // URL da Logo para PDFs
+    indicatorsLastUpdated: new Date().toISOString(), // Última atualização dos indicadores
     lastUpdated: new Date().toISOString()
 };
 
@@ -3955,6 +3959,9 @@ const SettingsMenu = () => {
     const [cdi2027Input, setCdi2027Input] = useState(((settings.cdi2027 || DEFAULT_SETTINGS.cdi2027) * 100).toFixed(2));
     const [cdi2028Input, setCdi2028Input] = useState(((settings.cdi2028 || DEFAULT_SETTINGS.cdi2028) * 100).toFixed(2));
     const [selicAnnualInput, setSelicAnnualInput] = useState((settings.selicAnnual * 100).toFixed(2));
+    const [ipcaInput, setIpcaInput] = useState(((settings.ipca || DEFAULT_SETTINGS.ipca) * 100).toFixed(2));
+    const [inccInput, setInccInput] = useState(((settings.incc || DEFAULT_SETTINGS.incc) * 100).toFixed(2));
+    const [usdBrlInput, setUsdBrlInput] = useState((settings.usdBrl || DEFAULT_SETTINGS.usdBrl).toFixed(2));
     const [loanRateInput, setLoanRateInput] = useState((settings.loanRate * 100).toFixed(2));
     const [iofRateInput, setIofRateInput] = useState((settings.iofRate * 100).toFixed(2));
     const [iofDiarioRateInput, setIofDiarioRateInput] = useState(((settings.iofDiarioRate || 0.000082) * 100).toFixed(4));
@@ -3965,6 +3972,7 @@ const SettingsMenu = () => {
     const [tacTDInput, setTacTDInput] = useState(formatCurrency(settings.tacTD));
     const [companyNameInput, setCompanyNameInput] = useState(settings.companyName || '');
     const [logoUrlInput, setLogoUrlInput] = useState(settings.logoUrl || '');
+    const [isLoadingIndicators, setIsLoadingIndicators] = useState(false);
 
     // Calculate monthly rates for display
     const cdiMonthly = annualToMonthly(parseFloat(cdiAnnualInput) / 100);
@@ -3977,6 +3985,9 @@ const SettingsMenu = () => {
             cdi2027: parseFloat(cdi2027Input) / 100,
             cdi2028: parseFloat(cdi2028Input) / 100,
             selicAnnual: parseFloat(selicAnnualInput) / 100,
+            ipca: parseFloat(ipcaInput) / 100,
+            incc: parseFloat(inccInput) / 100,
+            usdBrl: parseFloat(usdBrlInput),
             loanRate: parseFloat(loanRateInput) / 100,
             iofRate: parseFloat(iofRateInput) / 100,
             iofDiarioRate: parseFloat(iofDiarioRateInput) / 100,
@@ -3986,7 +3997,8 @@ const SettingsMenu = () => {
             tdRate: parseFloat(tdRateInput) / 100,
             tacTD: parseCurrency(tacTDInput),
             companyName: companyNameInput,
-            logoUrl: logoUrlInput
+            logoUrl: logoUrlInput,
+            indicatorsLastUpdated: settings.indicatorsLastUpdated
         };
         updateSettings(newSettings);
     };
@@ -3999,6 +4011,9 @@ const SettingsMenu = () => {
             setCdi2027Input((DEFAULT_SETTINGS.cdi2027 * 100).toFixed(2));
             setCdi2028Input((DEFAULT_SETTINGS.cdi2028 * 100).toFixed(2));
             setSelicAnnualInput((DEFAULT_SETTINGS.selicAnnual * 100).toFixed(2));
+            setIpcaInput((DEFAULT_SETTINGS.ipca * 100).toFixed(2));
+            setInccInput((DEFAULT_SETTINGS.incc * 100).toFixed(2));
+            setUsdBrlInput(DEFAULT_SETTINGS.usdBrl.toFixed(2));
             setLoanRateInput((DEFAULT_SETTINGS.loanRate * 100).toFixed(2));
             setIofRateInput((DEFAULT_SETTINGS.iofRate * 100).toFixed(2));
             setIofDiarioRateInput((DEFAULT_SETTINGS.iofDiarioRate * 100).toFixed(4));
@@ -4009,6 +4024,62 @@ const SettingsMenu = () => {
             setTacTDInput(formatCurrency(DEFAULT_SETTINGS.tacTD));
             setCompanyNameInput(DEFAULT_SETTINGS.companyName || '');
             setLogoUrlInput(DEFAULT_SETTINGS.logoUrl || '');
+        }
+    };
+
+    const handleUpdateIndicators = async () => {
+        setIsLoadingIndicators(true);
+        try {
+            const fetchIndicator = async (code) => {
+                const url = `https://api.bcb.gov.br/dados/serie/bcdata.sgs.${code}/dados/ultimos/1?formato=json`;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`Erro ao buscar série ${code}`);
+                const data = await response.json();
+                return data && data.length > 0 ? parseFloat(data[0].valor) : null;
+            };
+
+            const fetchUSD = async () => {
+                try {
+                    const response = await fetch('https://economia.awesomeapi.com.br/last/USD-BRL');
+                    const data = await response.json();
+                    return parseFloat(data.USDBRL.bid);
+                } catch (error) {
+                    console.error('Erro ao buscar USD:', error);
+                    return null;
+                }
+            };
+
+            const [selic, cdi, ipca, incc, usd] = await Promise.all([
+                fetchIndicator(11),
+                fetchIndicator(12),
+                fetchIndicator(433),
+                fetchIndicator(192),
+                fetchUSD()
+            ]);
+
+            if (selic) setSelicAnnualInput(selic.toFixed(2));
+            if (cdi) setCdiAnnualInput(cdi.toFixed(2));
+            if (ipca) setIpcaInput(ipca.toFixed(2));
+            if (incc) setInccInput(incc.toFixed(2));
+            if (usd) setUsdBrlInput(usd.toFixed(2));
+
+            const updatedSettings = {
+                ...settings,
+                selicAnnual: selic ? selic / 100 : settings.selicAnnual,
+                cdiAnnual: cdi ? cdi / 100 : settings.cdiAnnual,
+                ipca: ipca ? ipca / 100 : settings.ipca,
+                incc: incc ? incc / 100 : settings.incc,
+                usdBrl: usd || settings.usdBrl,
+                indicatorsLastUpdated: new Date().toISOString()
+            };
+            
+            updateSettings(updatedSettings);
+            toast.success('Indicadores atualizados com sucesso!');
+        } catch (error) {
+            console.error('Erro ao atualizar indicadores:', error);
+            toast.error('Erro ao buscar indicadores. Mantendo valores atuais.');
+        } finally {
+            setIsLoadingIndicators(false);
         }
     };
 
@@ -4124,6 +4195,72 @@ const SettingsMenu = () => {
                         <p style={{fontSize: '0.8rem', color: 'var(--text-secondary-color)', textAlign: 'center', marginTop: '5px'}}>
                             Mensal: {formatPercentage(selicMonthly)} a.m. | Anual: {selicAnnualInput}% a.a.
                         </p>
+                    </div>
+
+                    <h4 style={{marginTop: '20px', marginBottom: '10px', color: 'var(--primary-color)', display: 'flex', alignItems: 'center', gap: '10px'}}>
+                        📊 Outros Indicadores Econômicos
+                        <button 
+                            className="btn btn-primary" 
+                            onClick={handleUpdateIndicators}
+                            disabled={isLoadingIndicators}
+                            style={{fontSize: '0.8rem', padding: '6px 12px', marginLeft: 'auto'}}
+                        >
+                            {isLoadingIndicators ? '⏳ Atualizando...' : '🔄 Atualizar via BACEN'}
+                        </button>
+                    </h4>
+
+                    {settings.indicatorsLastUpdated && (
+                        <p style={{fontSize: '0.75rem', color: 'var(--text-secondary-color)', fontStyle: 'italic', marginTop: '-5px', marginBottom: '15px'}}>
+                            Última atualização: {new Date(settings.indicatorsLastUpdated).toLocaleString('pt-BR')}
+                        </p>
+                    )}
+
+                    <div className="form-group">
+                        <label>
+                            IPCA (%)
+                            <Tooltip text="Índice Nacional de Preços ao Consumidor Amplo - Mede a inflação oficial do país.">
+                                <span className="tooltip-icon">?</span>
+                            </Tooltip>
+                        </label>
+                        <input 
+                            type="number" 
+                            value={ipcaInput} 
+                            onChange={e => setIpcaInput(e.target.value)}
+                            step="0.01"
+                            inputMode="decimal"
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label>
+                            INCC (%)
+                            <Tooltip text="Índice Nacional de Custo da Construção - Mede a variação de custos na construção civil.">
+                                <span className="tooltip-icon">?</span>
+                            </Tooltip>
+                        </label>
+                        <input 
+                            type="number" 
+                            value={inccInput} 
+                            onChange={e => setInccInput(e.target.value)}
+                            step="0.01"
+                            inputMode="decimal"
+                        />
+                    </div>
+
+                    <div className="form-group">
+                        <label>
+                            Dólar (R$)
+                            <Tooltip text="Cotação do Dólar Americano em Reais.">
+                                <span className="tooltip-icon">?</span>
+                            </Tooltip>
+                        </label>
+                        <input 
+                            type="number" 
+                            value={usdBrlInput} 
+                            onChange={e => setUsdBrlInput(e.target.value)}
+                            step="0.01"
+                            inputMode="decimal"
+                        />
                     </div>
 
                     <h4 style={{marginTop: '20px', marginBottom: '10px', color: 'var(--primary-color)'}}>💸 Empréstimos</h4>
@@ -4824,6 +4961,79 @@ const TutorialOverlay = ({ onClose }) => {
     );
 };
 
+const EconomicIndicators = ({ setView }) => {
+    const { settings } = useSettings();
+
+    return (
+        <div className="calculator-container">
+            <div className="calculator-layout">
+                <div className="form-section">
+                    <h3>📊 Indicadores Econômicos</h3>
+                    
+                    {settings.indicatorsLastUpdated && (
+                        <p style={{fontSize: '0.85rem', color: 'var(--text-secondary-color)', fontStyle: 'italic', textAlign: 'center', marginBottom: '20px'}}>
+                            Última atualização: {new Date(settings.indicatorsLastUpdated).toLocaleString('pt-BR')}
+                        </p>
+                    )}
+
+                    <div style={{display: 'grid', gap: '15px'}}>
+                        <div style={{padding: '15px', backgroundColor: 'var(--card-bg)', borderRadius: '8px', border: '2px solid var(--primary-color)'}}>
+                            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                                <span style={{fontSize: '1rem', fontWeight: 'bold', color: 'var(--primary-color)'}}>CDI</span>
+                                <span style={{fontSize: '1.3rem', fontWeight: 'bold'}}>{((settings.cdiAnnual || DEFAULT_SETTINGS.cdiAnnual) * 100).toFixed(2)}%</span>
+                            </div>
+                            <p style={{fontSize: '0.75rem', color: 'var(--text-secondary-color)', margin: '5px 0 0 0'}}>Certificado de Depósito Interbancário</p>
+                        </div>
+
+                        <div style={{padding: '15px', backgroundColor: 'var(--card-bg)', borderRadius: '8px', border: '2px solid var(--success-color)'}}>
+                            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                                <span style={{fontSize: '1rem', fontWeight: 'bold', color: 'var(--success-color)'}}>SELIC</span>
+                                <span style={{fontSize: '1.3rem', fontWeight: 'bold'}}>{((settings.selicAnnual || DEFAULT_SETTINGS.selicAnnual) * 100).toFixed(2)}%</span>
+                            </div>
+                            <p style={{fontSize: '0.75rem', color: 'var(--text-secondary-color)', margin: '5px 0 0 0'}}>Taxa Básica de Juros</p>
+                        </div>
+
+                        <div style={{padding: '15px', backgroundColor: 'var(--card-bg)', borderRadius: '8px', border: '2px solid #f59e0b'}}>
+                            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                                <span style={{fontSize: '1rem', fontWeight: 'bold', color: '#f59e0b'}}>IPCA</span>
+                                <span style={{fontSize: '1.3rem', fontWeight: 'bold'}}>{((settings.ipca || DEFAULT_SETTINGS.ipca) * 100).toFixed(2)}%</span>
+                            </div>
+                            <p style={{fontSize: '0.75rem', color: 'var(--text-secondary-color)', margin: '5px 0 0 0'}}>Índice de Preços ao Consumidor</p>
+                        </div>
+
+                        <div style={{padding: '15px', backgroundColor: 'var(--card-bg)', borderRadius: '8px', border: '2px solid #8b5cf6'}}>
+                            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                                <span style={{fontSize: '1rem', fontWeight: 'bold', color: '#8b5cf6'}}>INCC</span>
+                                <span style={{fontSize: '1.3rem', fontWeight: 'bold'}}>{((settings.incc || DEFAULT_SETTINGS.incc) * 100).toFixed(2)}%</span>
+                            </div>
+                            <p style={{fontSize: '0.75rem', color: 'var(--text-secondary-color)', margin: '5px 0 0 0'}}>Índice de Custo da Construção</p>
+                        </div>
+
+                        <div style={{padding: '15px', backgroundColor: 'var(--card-bg)', borderRadius: '8px', border: '2px solid #10b981'}}>
+                            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                                <span style={{fontSize: '1rem', fontWeight: 'bold', color: '#10b981'}}>Dólar</span>
+                                <span style={{fontSize: '1.3rem', fontWeight: 'bold'}}>R$ {(settings.usdBrl || DEFAULT_SETTINGS.usdBrl).toFixed(2)}</span>
+                            </div>
+                            <p style={{fontSize: '0.75rem', color: 'var(--text-secondary-color)', margin: '5px 0 0 0'}}>USD/BRL - Dólar Americano</p>
+                        </div>
+                    </div>
+
+                    <div style={{marginTop: '20px', padding: '15px', backgroundColor: 'var(--bg-color)', borderRadius: '8px', border: '1px solid var(--border-color)'}}>
+                        <p style={{fontSize: '0.85rem', color: 'var(--text-secondary-color)', margin: '0'}}>
+                            💡 <strong>Dica:</strong> Para atualizar os indicadores automaticamente via API do Banco Central, acesse <strong>Definições</strong> e clique em "Atualizar via BACEN".
+                        </p>
+                    </div>
+
+                    <div className="action-buttons">
+                        <button className="btn btn-secondary" onClick={() => setView('home')}>← Voltar ao Menu</button>
+                        <button className="btn btn-primary" onClick={() => setView('settings')}>⚙️ Ir para Definições</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const MainMenu = ({ setView }) => {
     return (
         <>
@@ -4832,6 +5042,7 @@ const MainMenu = ({ setView }) => {
                 <p>Seu canivete suíço de ferramentas financeiras.</p>
             </div>
             <div className="card-grid">
+                <FeatureCard icon="📊" title="Indicadores Econômicos" description="Visualize CDI, SELIC, IPCA, INCC e Dólar." onClick={() => setView('indicators')} />
                 <FeatureCard icon="💰" title="Simular Investimento" description="Compare a rentabilidade de LCA/LCI e CDB/RDC." onClick={() => setView('investment')} />
                 <FeatureCard icon="🗓️" title="Aplicação Programada" description="Simule o acúmulo de patrimônio com aportes mensais." onClick={() => setView('scheduledApplication')} />
                 <FeatureCard icon="🧾" title="Desconto de Recebíveis" description="Simule a antecipação de boletos e cheques." onClick={() => setView('receivablesDiscount')} />
@@ -5017,6 +5228,8 @@ const App = () => {
         }
         
         switch (currentView) {
+            case 'indicators':
+                return <EconomicIndicators setView={setCurrentView} />;
             case 'investment':
                 return <InvestmentSimulator onSave={handleSaveSimulation} cdiRate={cdiRate} />;
             case 'loanPre':
