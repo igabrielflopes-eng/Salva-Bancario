@@ -1859,7 +1859,8 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
             const monthlyCdbRate = monthlyBaseRate * cdbProf;
             
             const selicAnnual = settings.selic / 100;
-            const poupancaMonthlyRate = selicAnnual <= 0.085 ? annualToMonthly(selicAnnual * 0.70) : 0.005;
+            const poupancaBaseRate = selicAnnual <= 0.085 ? annualToMonthly(selicAnnual * 0.70) : 0.005;
+            const poupancaMonthlyRate = poupancaBaseRate + (settings.tr / 100);
 
             balanceLCA *= (1 + monthlyLcaRate);
             balanceCDB *= (1 + monthlyCdbRate);
@@ -2922,7 +2923,8 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
             const monthlyCdbRate = monthlyBaseRate * cdbProf;
             
             const selicAnnual = settings.selic / 100;
-            const poupancaMonthlyRate = selicAnnual <= 0.085 ? annualToMonthly(selicAnnual * 0.70) : 0.005;
+            const poupancaBaseRate = selicAnnual <= 0.085 ? annualToMonthly(selicAnnual * 0.70) : 0.005;
+            const poupancaMonthlyRate = poupancaBaseRate + (settings.tr / 100);
 
             const interestLCA = currentBalanceLCA * monthlyLcaRate;
             currentBalanceLCA += interestLCA + monthlyAmount;
