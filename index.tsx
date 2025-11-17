@@ -2285,7 +2285,7 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                                     </h5>
                                     <p style={{fontSize: '0.85rem', color: 'var(--text-secondary-color)', marginBottom: '10px'}}>
                                         {results.useSelicProjection 
-                                            ? 'Taxa SELIC constante aplicada:'
+                                            ? 'Taxa CDI constante aplicada:'
                                             : Object.keys(results.cdiByYear).length > 1 
                                                 ? 'Simulação com projeções multi-ano do Boletim Focus do BC:'
                                                 : 'Taxa CDI aplicada nesta simulação:'}
@@ -3039,7 +3039,7 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
                     <div className="form-group">
                         <label>
                             Taxa de Referência
-                            <Tooltip text="Escolha a taxa base para os cálculos: CDI com projeções do Boletim Focus ou SELIC constante.">
+                            <Tooltip text="Escolha a taxa base para os cálculos: CDI com projeções do Boletim Focus ou CDI fixo constante.">
                                 <span className="tooltip-icon">?</span>
                             </Tooltip>
                         </label>
@@ -3062,29 +3062,31 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
                                     onChange={() => setUseSelicProjection(true)}
                                     style={{marginRight: '8px'}}
                                 />
-                                SELIC ({settings?.selic?.toFixed(2) || '0.00'}% a.a.)
+                                CDI Fixo ({settings?.cdi?.toFixed(2) || '0.00'}% a.a.)
                             </label>
                         </div>
                         <p style={{fontSize: '0.75rem', color: 'var(--text-secondary-color)', marginTop: '8px', lineHeight: '1.4'}}>
                             {useSelicProjection 
-                                ? '💡 SELIC constante: ideal para simulações de curto prazo com taxa fixa.'
+                                ? '💡 CDI constante: ideal para simulações de curto prazo com taxa fixa.'
                                 : '💡 CDI com projeções: usa taxas anuais diferentes conforme Boletim Focus do BC (2026: 12.25%, 2027: 10.50%, 2028: 10%).'}
                         </p>
                     </div>
                     <div className="form-group">
                         <label>
-                            Rentabilidade LCA/LCI (% {useSelicProjection ? 'da SELIC' : 'do CDI'})
+                            Rentabilidade LCA/LCI (% do CDI)
                         </label>
                         <input type="number" value={lcaProfitability} onChange={e => setLcaProfitability(e.target.value)} inputMode="decimal" />
                     </div>
                     <div className="form-group">
                         <label>
-                            Rentabilidade CDB/RDC (% {useSelicProjection ? 'da SELIC' : 'do CDI'})
+                            Rentabilidade CDB/RDC (% do CDI)
                         </label>
                         <input type="number" value={cdbProfitability} onChange={e => setCdbProfitability(e.target.value)} inputMode="decimal" />
                     </div>
                      <p className="form-note">Observação: Aplicações em LCA/LCI podem ter carência (ex: 6 meses). Cada novo aporte pode estar sujeito a uma nova carência.</p>
-                     <p style={{fontSize: '0.8rem', color: 'var(--text-secondary-color)', textAlign: 'center', marginBottom: '15px'}}>CDI: {formatCDI(cdiMonthly, cdiAnnual)}</p>
+                     <p style={{fontSize: '0.8rem', color: 'var(--text-secondary-color)', textAlign: 'center', marginBottom: '15px'}}>
+                        {useSelicProjection ? `CDI Fixo: ${settings?.cdi?.toFixed(2) || '0.00'}% a.a.` : `CDI: ${formatCDI(cdiMonthly, cdiAnnual)}`}
+                    </p>
                     <button className="btn" onClick={handleCalculate} disabled={!activeMonths || parseInt(activeMonths) <= 0}>Calcular</button>
                     {results && (
                         <div className="btn-group">
@@ -3232,7 +3234,7 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
                                     </h5>
                                     <p style={{fontSize: '0.85rem', color: 'var(--text-secondary-color)', marginBottom: '10px'}}>
                                         {results.useSelicProjection 
-                                            ? 'Taxa SELIC constante aplicada:'
+                                            ? 'Taxa CDI constante aplicada:'
                                             : Object.keys(results.cdiByYear).length > 1 
                                                 ? 'Simulação com projeções multi-ano do Boletim Focus do BC:'
                                                 : 'Taxa CDI aplicada nesta simulação:'}
