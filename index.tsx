@@ -1692,7 +1692,7 @@ const DEFAULT_SETTINGS = {
     cdi2028: 0.1000, // 10.00% - Projeção Boletim Focus
     selic: 15.00, // 15.00% a.a. (usado para Poupança)
     selicAnnual: 0.1500, // 15.00%
-    tr: 0.00, // 0.00% a.m. (Taxa Referencial - somada à Poupança)
+    tr: 1.88, // 1.88% a.a. (Taxa Referencial - somada à Poupança)
     ipca: 0.0482, // 4.82% a.a.
     usdBrl: 5.85, // R$ 5,85
     loanRate: 0.025, // 2.5% a.m.
@@ -1722,7 +1722,7 @@ const useSettings = () => {
                 parsed.selic = parsed.selicAnnual ? parsed.selicAnnual * 100 : 15.00;
             }
             if (parsed.tr === undefined) {
-                parsed.tr = 0.00; // TR atual (praticamente zero desde 2017)
+                parsed.tr = 1.88; // TR atual: 1,88% a.a. (últimos 12 meses)
             }
             // Salvar a migração
             localStorage.setItem('appSettings', JSON.stringify(parsed));
@@ -1860,7 +1860,8 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
             
             const selicAnnual = settings.selic / 100;
             const poupancaBaseRate = selicAnnual <= 0.085 ? annualToMonthly(selicAnnual * 0.70) : 0.005;
-            const poupancaMonthlyRate = poupancaBaseRate + (settings.tr / 100);
+            const trMonthly = annualToMonthly(settings.tr / 100);
+            const poupancaMonthlyRate = poupancaBaseRate + trMonthly;
 
             balanceLCA *= (1 + monthlyLcaRate);
             balanceCDB *= (1 + monthlyCdbRate);
@@ -2924,7 +2925,8 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
             
             const selicAnnual = settings.selic / 100;
             const poupancaBaseRate = selicAnnual <= 0.085 ? annualToMonthly(selicAnnual * 0.70) : 0.005;
-            const poupancaMonthlyRate = poupancaBaseRate + (settings.tr / 100);
+            const trMonthly = annualToMonthly(settings.tr / 100);
+            const poupancaMonthlyRate = poupancaBaseRate + trMonthly;
 
             const interestLCA = currentBalanceLCA * monthlyLcaRate;
             currentBalanceLCA += interestLCA + monthlyAmount;
