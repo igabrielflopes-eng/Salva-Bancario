@@ -4365,10 +4365,12 @@ const SettingsMenu = () => {
 
     const handleSave = () => {
         const newSettings = {
+            cdi: parseFloat(cdiAnnualInput),
             cdiAnnual: parseFloat(cdiAnnualInput) / 100,
             cdi2026: parseFloat(cdi2026Input) / 100,
             cdi2027: parseFloat(cdi2027Input) / 100,
             cdi2028: parseFloat(cdi2028Input) / 100,
+            selic: parseFloat(selicAnnualInput),
             selicAnnual: parseFloat(selicAnnualInput) / 100,
             tr: parseFloat(trInput),
             ipca: parseFloat(ipcaInput) / 100,
@@ -4396,6 +4398,7 @@ const SettingsMenu = () => {
             setCdi2027Input((DEFAULT_SETTINGS.cdi2027 * 100).toFixed(2));
             setCdi2028Input((DEFAULT_SETTINGS.cdi2028 * 100).toFixed(2));
             setSelicAnnualInput((DEFAULT_SETTINGS.selicAnnual * 100).toFixed(2));
+            setTrInput(DEFAULT_SETTINGS.tr.toFixed(2));
             setIpcaInput((DEFAULT_SETTINGS.ipca * 100).toFixed(2));
             setUsdBrlInput(DEFAULT_SETTINGS.usdBrl.toFixed(2));
             setLoanRateInput((DEFAULT_SETTINGS.loanRate * 100).toFixed(2));
@@ -4592,6 +4595,25 @@ const SettingsMenu = () => {
                             Última atualização: {new Date(settings.indicatorsLastUpdated).toLocaleString('pt-BR')}
                         </p>
                     )}
+
+                    <div className="form-group">
+                        <label>
+                            TR - Taxa Referencial (% a.a.)
+                            <Tooltip text="Taxa Referencial - Índice usado como referência para a remuneração da Poupança. Informada como % ao ano (a.a.), é convertida para mensal no cálculo.">
+                                <span className="tooltip-icon">?</span>
+                            </Tooltip>
+                        </label>
+                        <input 
+                            type="number" 
+                            value={trInput} 
+                            onChange={e => setTrInput(e.target.value)}
+                            step="0.01"
+                            inputMode="decimal"
+                        />
+                        <p style={{fontSize: '0.75rem', color: 'var(--text-secondary-color)', fontStyle: 'italic', marginTop: '5px'}}>
+                            Acumulada últimos 12 meses. Aplicada à Poupança.
+                        </p>
+                    </div>
 
                     <div className="form-group">
                         <label>
