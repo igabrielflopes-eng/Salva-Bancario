@@ -2293,7 +2293,7 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                                             <span style={{color: 'var(--primary-color)', fontWeight: 'bold'}}>{results.effectiveMonthlyPoupanca.toFixed(2)}%</span> a.m.
                                         </div>
                                         <div style={{fontSize: '0.75rem', color: 'var(--text-secondary-color)', marginTop: '6px', fontStyle: 'italic'}}>
-                                            (70% da SELIC)
+                                            {settings.selic > 8.5 ? '(0.5% a.m. + TR)' : '(70% SELIC + TR)'}
                                         </div>
                                     </div>
                                 </div>
@@ -3242,7 +3242,7 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
                                             <span style={{color: 'var(--primary-color)', fontWeight: 'bold'}}>{results.effectiveMonthlyPoupanca.toFixed(2)}%</span> a.m.
                                         </div>
                                         <div style={{fontSize: '0.75rem', color: 'var(--text-secondary-color)', marginTop: '6px', fontStyle: 'italic'}}>
-                                            (70% da SELIC)
+                                            {settings.selic > 8.5 ? '(0.5% a.m. + TR)' : '(70% SELIC + TR)'}
                                         </div>
                                     </div>
                                 </div>
