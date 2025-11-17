@@ -1825,7 +1825,7 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
             
             let baseRateAnnual;
             if (useSelicProjection) {
-                baseRateAnnual = settings.selic / 100;
+                baseRateAnnual = settings.cdi / 100;
             } else {
                 baseRateAnnual = getCDIForYear(settings, futureYear);
             }
@@ -2070,7 +2070,7 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                     <div style={{marginTop: '15px', marginBottom: '15px', padding: '15px', backgroundColor: 'var(--card-bg)', borderRadius: '8px', border: '1px solid var(--border-color)'}}>
                         <label style={{display: 'block', marginBottom: '10px', fontWeight: 'bold', color: 'var(--text-color)'}}>
                             Taxa de Referência
-                            <Tooltip text="Escolha entre usar CDI com projeções multi-ano ou SELIC constante.">
+                            <Tooltip text="Escolha entre usar CDI com projeções multi-ano ou CDI fixo constante.">
                                 <span className="tooltip-icon">?</span>
                             </Tooltip>
                         </label>
@@ -2093,19 +2093,19 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                                     onChange={() => setUseSelicProjection(true)}
                                     style={{marginRight: '8px'}}
                                 />
-                                SELIC ({((settings.selicAnnual || DEFAULT_SETTINGS.selicAnnual) * 100).toFixed(2)}% a.a.)
+                                CDI Fixo ({settings.cdi.toFixed(2)}% a.a.)
                             </label>
                         </div>
                         <p style={{fontSize: '0.75rem', color: 'var(--text-secondary-color)', marginTop: '8px', marginBottom: '0'}}>
                             {useSelicProjection 
-                                ? 'Usando taxa SELIC constante para todo o período.' 
+                                ? 'Usando taxa CDI constante para todo o período.' 
                                 : 'Usando CDI atual e projeções para 2026-2028 do Boletim Focus.'}
                         </p>
                     </div>
                     
                      <div className="form-group">
                         <label htmlFor="lcaProfitability">
-                            Rentabilidade LCA/LCI (% {useSelicProjection ? 'da SELIC' : 'do CDI'})
+                            Rentabilidade LCA/LCI (% do CDI)
                              <Tooltip text="Investimentos isentos de Imposto de Renda, ideal para pessoas físicas.">
                                 <span className="tooltip-icon">?</span>
                             </Tooltip>
@@ -2114,7 +2114,7 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                     </div>
                     <div className="form-group">
                         <label htmlFor="cdbProfitability">
-                            Rentabilidade CDB/RDC (% {useSelicProjection ? 'da SELIC' : 'do CDI'})
+                            Rentabilidade CDB/RDC (% do CDI)
                              <Tooltip text="Investimentos com cobrança de Imposto de Renda regressivo sobre o rendimento.">
                                 <span className="tooltip-icon">?</span>
                             </Tooltip>
@@ -2122,7 +2122,7 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                         <input type="number" id="cdbProfitability" value={cdbProfitability} onChange={e => setCdbProfitability(e.target.value)} inputMode="decimal" />
                     </div>
                     <p style={{fontSize: '0.8rem', color: 'var(--text-secondary-color)', textAlign: 'center', marginBottom: '15px'}}>
-                        {useSelicProjection ? `SELIC: ${((settings.selicAnnual || DEFAULT_SETTINGS.selicAnnual) * 100).toFixed(2)}% a.a.` : `CDI: ${formatCDI(cdiMonthly, cdiAnnual)}`}
+                        {useSelicProjection ? `CDI Fixo: ${settings.cdi.toFixed(2)}% a.a.` : `CDI: ${formatCDI(cdiMonthly, cdiAnnual)}`}
                     </p>
                     <button className="btn" onClick={handleCalculate}>Calcular</button>
                     <div className="keyboard-hint">Atalho: ENTER</div>
@@ -2281,7 +2281,7 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                             {results.cdiByYear && (
                                 <div style={{marginTop: '20px', padding: '15px', backgroundColor: 'var(--card-bg)', borderRadius: '8px', border: '1px solid var(--border-color)'}}>
                                     <h5 style={{margin: '0 0 10px 0', color: 'var(--primary-color)', fontSize: '0.95rem'}}>
-                                        📊 Taxas {results.useSelicProjection ? 'SELIC' : 'CDI'} Aplicadas
+                                        📊 Taxas CDI Aplicadas
                                     </h5>
                                     <p style={{fontSize: '0.85rem', color: 'var(--text-secondary-color)', marginBottom: '10px'}}>
                                         {results.useSelicProjection 
@@ -2890,7 +2890,7 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
             
             let baseRateAnnual;
             if (useSelicProjection) {
-                baseRateAnnual = settings.selic / 100;
+                baseRateAnnual = settings.cdi / 100;
             } else {
                 baseRateAnnual = getCDIForYear(settings, futureYear);
             }
@@ -3228,7 +3228,7 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
                             {results.cdiByYear && (
                                 <div style={{marginTop: '20px', padding: '15px', backgroundColor: 'var(--card-bg)', borderRadius: '8px', border: '1px solid var(--border-color)'}}>
                                     <h5 style={{margin: '0 0 10px 0', color: 'var(--primary-color)', fontSize: '0.95rem'}}>
-                                        📊 Taxas {results.useSelicProjection ? 'SELIC' : 'CDI'} Aplicadas
+                                        📊 Taxas CDI Aplicadas
                                     </h5>
                                     <p style={{fontSize: '0.85rem', color: 'var(--text-secondary-color)', marginBottom: '10px'}}>
                                         {results.useSelicProjection 
