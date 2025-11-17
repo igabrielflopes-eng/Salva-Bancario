@@ -2293,17 +2293,15 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                                 </div>
                             </div>
                             
-                            {results.cdiByYear && (
+                            {results.cdiByYear && !results.useSelicProjection && (
                                 <div style={{marginTop: '20px', padding: '15px', backgroundColor: 'var(--card-bg)', borderRadius: '8px', border: '1px solid var(--border-color)'}}>
                                     <h5 style={{margin: '0 0 10px 0', color: 'var(--primary-color)', fontSize: '0.95rem'}}>
                                         📊 Taxas CDI Aplicadas
                                     </h5>
                                     <p style={{fontSize: '0.85rem', color: 'var(--text-secondary-color)', marginBottom: '10px'}}>
-                                        {results.useSelicProjection 
-                                            ? 'Taxa CDI constante aplicada:'
-                                            : Object.keys(results.cdiByYear).length > 1 
-                                                ? 'Simulação com projeções multi-ano do Boletim Focus do BC:'
-                                                : 'Taxa CDI aplicada nesta simulação:'}
+                                        {Object.keys(results.cdiByYear).length > 1 
+                                            ? 'Simulação com projeções multi-ano do Boletim Focus do BC:'
+                                            : 'Taxa CDI aplicada nesta simulação:'}
                                     </p>
                                     <div style={{display: 'flex', flexWrap: 'wrap', gap: '10px'}}>
                                         {Object.entries(results.cdiByYear).map(([year, rate]) => (
@@ -3242,17 +3240,15 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
                                 </div>
                             </div>
                             
-                            {results.cdiByYear && (
+                            {results.cdiByYear && !results.useSelicProjection && (
                                 <div style={{marginTop: '20px', padding: '15px', backgroundColor: 'var(--card-bg)', borderRadius: '8px', border: '1px solid var(--border-color)'}}>
                                     <h5 style={{margin: '0 0 10px 0', color: 'var(--primary-color)', fontSize: '0.95rem'}}>
                                         📊 Taxas CDI Aplicadas
                                     </h5>
                                     <p style={{fontSize: '0.85rem', color: 'var(--text-secondary-color)', marginBottom: '10px'}}>
-                                        {results.useSelicProjection 
-                                            ? 'Taxa CDI constante aplicada:'
-                                            : Object.keys(results.cdiByYear).length > 1 
-                                                ? 'Simulação com projeções multi-ano do Boletim Focus do BC:'
-                                                : 'Taxa CDI aplicada nesta simulação:'}
+                                        {Object.keys(results.cdiByYear).length > 1 
+                                            ? 'Simulação com projeções multi-ano do Boletim Focus do BC:'
+                                            : 'Taxa CDI aplicada nesta simulação:'}
                                     </p>
                                     <div style={{display: 'flex', flexWrap: 'wrap', gap: '10px'}}>
                                         {Object.entries(results.cdiByYear).map(([year, rate]) => (
