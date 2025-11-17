@@ -1699,8 +1699,8 @@ const DEFAULT_SETTINGS = {
     iofRate: 0.0038, // 0.38% IOF Adicional
     iofDiarioRate: 0.000082, // 0.0082% IOF Diário
     tacLoan: 0, // R$ 0,00
-    lcaPercentCDI: 0.95, // 95% do CDI
-    cdbPercentCDI: 1.10, // 110% do CDI
+    lcaPercentCDI: 0.82, // 82% do CDI
+    cdbPercentCDI: 0.98, // 98% do CDI
     tdRate: 0.020, // 2.0% a.m.
     tacTD: 150, // R$ 150,00
     companyName: '', // Nome da Empresa para PDFs
@@ -5306,7 +5306,6 @@ const MainMenu = ({ setView }) => {
                 <p>Seu canivete suíço de ferramentas financeiras.</p>
             </div>
             <div className="card-grid">
-                <FeatureCard icon="📊" title="Indicadores Econômicos" description="Visualize CDI, SELIC, IPCA e Dólar." onClick={() => setView('indicators')} />
                 <FeatureCard icon="💰" title="Comparar Investimento" description="Compare a rentabilidade de LCA/LCI e CDB/RDC." onClick={() => setView('investment')} />
                 <FeatureCard icon="🗓️" title="Poupança Programada" description="Simule o acúmulo de patrimônio com aportes mensais." onClick={() => setView('scheduledApplication')} />
                 <FeatureCard icon="🧾" title="Antecipar Recebíveis" description="Calcule quanto recebe antecipando boletos e cheques." onClick={() => setView('receivablesDiscount')} />
@@ -5317,6 +5316,7 @@ const MainMenu = ({ setView }) => {
                 <FeatureCard icon="🔄" title="Converter Taxas" description="Capitalização e descapitalização entre diferentes períodos." onClick={() => setView('rateConverter')} />
                 <FeatureCard icon="🔍" title="Comparar Simulações" description="Compare lado a lado duas simulações salvas." onClick={() => setView('comparison')} />
                 <FeatureCard icon="🗂️" title="Histórico" description="Veja e compare suas simulações salvas." onClick={() => setView('history')} />
+                <FeatureCard icon="📊" title="Indicadores Econômicos" description="Visualize CDI, SELIC, IPCA e Dólar." onClick={() => setView('indicators')} />
                 <FeatureCard icon="⚙️" title="Configurações" description="Configure valores padrão do aplicativo." onClick={() => setView('settings')} />
             </div>
         </>
