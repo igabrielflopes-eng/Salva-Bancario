@@ -1685,10 +1685,12 @@ const getCDIForYear = (settings, year) => {
 };
 
 const DEFAULT_SETTINGS = {
+    cdi: 14.90, // 14.90% a.a. (usado como taxa fixa)
     cdiAnnual: 0.1490, // 14.90%
     cdi2026: 0.1225, // 12.25% - Projeção Boletim Focus
     cdi2027: 0.1050, // 10.50% - Projeção Boletim Focus
     cdi2028: 0.1000, // 10.00% - Projeção Boletim Focus
+    selic: 15.00, // 15.00% a.a. (usado para Poupança)
     selicAnnual: 0.1500, // 15.00%
     ipca: 0.0482, // 4.82% a.a.
     usdBrl: 5.85, // R$ 5,85
@@ -1709,7 +1711,20 @@ const DEFAULT_SETTINGS = {
 const useSettings = () => {
     const [settings, setSettingsState] = useState(() => {
         const saved = localStorage.getItem('appSettings');
-        return saved ? JSON.parse(saved) : DEFAULT_SETTINGS;
+        if (saved) {
+            const parsed = JSON.parse(saved);
+            // Migração automática: adicionar campos novos se não existirem
+            if (parsed.cdi === undefined) {
+                parsed.cdi = parsed.cdiAnnual ? parsed.cdiAnnual * 100 : 14.90;
+            }
+            if (parsed.selic === undefined) {
+                parsed.selic = parsed.selicAnnual ? parsed.selicAnnual * 100 : 15.00;
+            }
+            // Salvar a migração
+            localStorage.setItem('appSettings', JSON.stringify(parsed));
+            return parsed;
+        }
+        return DEFAULT_SETTINGS;
     });
 
     const updateSettings = (newSettings) => {
