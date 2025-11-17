@@ -4342,6 +4342,7 @@ const SettingsMenu = () => {
     const [cdi2027Input, setCdi2027Input] = useState(((settings.cdi2027 || DEFAULT_SETTINGS.cdi2027) * 100).toFixed(2));
     const [cdi2028Input, setCdi2028Input] = useState(((settings.cdi2028 || DEFAULT_SETTINGS.cdi2028) * 100).toFixed(2));
     const [selicAnnualInput, setSelicAnnualInput] = useState((settings.selicAnnual * 100).toFixed(2));
+    const [trInput, setTrInput] = useState(((settings.tr || DEFAULT_SETTINGS.tr)).toFixed(2));
     const [ipcaInput, setIpcaInput] = useState(((settings.ipca || DEFAULT_SETTINGS.ipca) * 100).toFixed(2));
     const [usdBrlInput, setUsdBrlInput] = useState((settings.usdBrl || DEFAULT_SETTINGS.usdBrl).toFixed(2));
     const [loanRateInput, setLoanRateInput] = useState((settings.loanRate * 100).toFixed(2));
@@ -4367,6 +4368,7 @@ const SettingsMenu = () => {
             cdi2027: parseFloat(cdi2027Input) / 100,
             cdi2028: parseFloat(cdi2028Input) / 100,
             selicAnnual: parseFloat(selicAnnualInput) / 100,
+            tr: parseFloat(trInput),
             ipca: parseFloat(ipcaInput) / 100,
             usdBrl: parseFloat(usdBrlInput),
             loanRate: parseFloat(loanRateInput) / 100,
