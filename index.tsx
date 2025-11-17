@@ -1692,6 +1692,7 @@ const DEFAULT_SETTINGS = {
     cdi2028: 0.1000, // 10.00% - Projeção Boletim Focus
     selic: 15.00, // 15.00% a.a. (usado para Poupança)
     selicAnnual: 0.1500, // 15.00%
+    tr: 0.00, // 0.00% a.m. (Taxa Referencial - somada à Poupança)
     ipca: 0.0482, // 4.82% a.a.
     usdBrl: 5.85, // R$ 5,85
     loanRate: 0.025, // 2.5% a.m.
@@ -1719,6 +1720,9 @@ const useSettings = () => {
             }
             if (parsed.selic === undefined) {
                 parsed.selic = parsed.selicAnnual ? parsed.selicAnnual * 100 : 15.00;
+            }
+            if (parsed.tr === undefined) {
+                parsed.tr = 0.00; // TR atual (praticamente zero desde 2017)
             }
             // Salvar a migração
             localStorage.setItem('appSettings', JSON.stringify(parsed));
