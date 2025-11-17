@@ -800,8 +800,8 @@ const styles = `
   
   .investment-results-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 30px;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
   }
   
   .form-note {
@@ -1114,7 +1114,7 @@ const styles = `
     }
     
     .investment-results-grid {
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr 1fr 1fr;
     }
   }
 
@@ -1815,6 +1815,7 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
 
         let balanceLCA = principal;
         let balanceCDB = principal;
+        let balancePoupanca = principal;
         const tableData = [];
         const cdiByYear = {};
 
@@ -1824,7 +1825,7 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
             
             let baseRateAnnual;
             if (useSelicProjection) {
-                baseRateAnnual = settings.selicAnnual || DEFAULT_SETTINGS.selicAnnual;
+                baseRateAnnual = settings.selic / 100;
             } else {
                 baseRateAnnual = getCDIForYear(settings, futureYear);
             }
@@ -1837,9 +1838,13 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
 
             const monthlyLcaRate = monthlyBaseRate * lcaProf;
             const monthlyCdbRate = monthlyBaseRate * cdbProf;
+            
+            const selicAnnual = settings.selic / 100;
+            const poupancaMonthlyRate = selicAnnual <= 0.085 ? annualToMonthly(selicAnnual * 0.70) : 0.005;
 
             balanceLCA *= (1 + monthlyLcaRate);
             balanceCDB *= (1 + monthlyCdbRate);
+            balancePoupanca *= (1 + poupancaMonthlyRate);
 
             tableData.push({
                 month: i + 1,
@@ -1847,6 +1852,8 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                 profitLCA: balanceLCA - principal,
                 balanceCDB,
                 profitCDB: balanceCDB - principal,
+                balancePoupanca,
+                profitPoupanca: balancePoupanca - principal,
                 cdiRate: baseRateAnnual,
                 year: futureYear,
             });
@@ -1862,8 +1869,24 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
         const finalValueCDBNet = finalValueCDBGross - taxAmount;
         const profitCDBNet = profitCDBGross - taxAmount;
 
+        const finalValuePoupanca = balancePoupanca;
+        const profitPoupanca = finalValuePoupanca - principal;
+
         const netRateLCA = (profitLCA / principal) * 100;
         const netRateCDB = (profitCDBNet / principal) * 100;
+        const netRatePoupanca = (profitPoupanca / principal) * 100;
+
+        const selicAnnual = settings.selic / 100;
+        const poupancaAnnualRate = selicAnnual > 0.085 ? selicAnnual * 0.70 : 0.005;
+        
+        const effectiveAnnualLCA = ((finalValueLCA / principal) ** (12 / numMonths) - 1) * 100;
+        const effectiveMonthlyLCA = annualToMonthly(effectiveAnnualLCA / 100) * 100;
+        
+        const effectiveAnnualCDB = ((finalValueCDBNet / principal) ** (12 / numMonths) - 1) * 100;
+        const effectiveMonthlyCDB = annualToMonthly(effectiveAnnualCDB / 100) * 100;
+        
+        const effectiveAnnualPoupanca = ((finalValuePoupanca / principal) ** (12 / numMonths) - 1) * 100;
+        const effectiveMonthlyPoupanca = annualToMonthly(effectiveAnnualPoupanca / 100) * 100;
 
         return {
             principal,
@@ -1871,6 +1894,8 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
             finalValueLCA,
             profitLCA,
             netRateLCA,
+            effectiveAnnualLCA,
+            effectiveMonthlyLCA,
             finalValueCDBGross,
             profitCDBGross,
             taxRate,
@@ -1878,6 +1903,14 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
             finalValueCDBNet,
             profitCDBNet,
             netRateCDB,
+            effectiveAnnualCDB,
+            effectiveMonthlyCDB,
+            finalValuePoupanca,
+            profitPoupanca,
+            netRatePoupanca,
+            effectiveAnnualPoupanca,
+            effectiveMonthlyPoupanca,
+            poupancaAnnualRate,
             tableData,
             lcaProfitability: lcaProf,
             cdbProfitability: cdbProf,
@@ -2164,7 +2197,7 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                                         <p className="positive">{formatCurrency(results.profitLCA)}</p>
                                     </div>
                                     <div className="summary-item">
-                                        <h4>Taxa Final Líquida</h4>
+                                        <h4>Rendimento Total</h4>
                                         <p className="positive">{results.netRateLCA.toFixed(2)}%</p>
                                     </div>
                                 </div>
@@ -2175,7 +2208,7 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                                         <p>{formatCurrency(results.finalValueCDBNet)}</p>
                                         <div className="cdb-breakdown">
                                             <div><span>Valor Bruto:</span> <span>{formatCurrency(results.finalValueCDBGross)}</span></div>
-                                            <div><span>Imposto de Renda ({formatPercentage(results.taxRate)}):</span> <span className="ir-value">-{formatCurrency(results.taxAmount)}</span></div>
+                                            <div><span>Imposto ({formatPercentage(results.taxRate)}):</span> <span className="ir-value">-{formatCurrency(results.taxAmount)}</span></div>
                                         </div>
                                     </div>
                                      <div className="summary-item">
@@ -2183,8 +2216,64 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                                         <p className="positive">{formatCurrency(results.profitCDBNet)}</p>
                                     </div>
                                     <div className="summary-item">
-                                        <h4>Taxa Final Líquida</h4>
+                                        <h4>Rendimento Total</h4>
                                         <p className="positive">{results.netRateCDB.toFixed(2)}%</p>
+                                    </div>
+                                </div>
+                                <div className="poupanca-results">
+                                     <h4>Poupança</h4>
+                                     <div className="summary-item">
+                                        <h4>Valor Final Líquido</h4>
+                                        <p>{formatCurrency(results.finalValuePoupanca)}</p>
+                                    </div>
+                                     <div className="summary-item">
+                                        <h4>Total em Juros</h4>
+                                        <p className="positive">{formatCurrency(results.profitPoupanca)}</p>
+                                    </div>
+                                    <div className="summary-item">
+                                        <h4>Rendimento Total</h4>
+                                        <p className="positive">{results.netRatePoupanca.toFixed(2)}%</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div style={{marginTop: '20px', padding: '15px', backgroundColor: 'var(--card-bg)', borderRadius: '8px', border: '1px solid var(--border-color)'}}>
+                                <h5 style={{margin: '0 0 10px 0', color: 'var(--primary-color)', fontSize: '0.95rem'}}>
+                                    💰 Taxas Líquidas Efetivas (após impostos)
+                                </h5>
+                                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px', marginTop: '15px'}}>
+                                    <div style={{padding: '12px', backgroundColor: 'var(--bg-color)', borderRadius: '6px', border: '1px solid var(--border-color)'}}>
+                                        <strong style={{display: 'block', marginBottom: '8px', color: 'var(--text-color)'}}>LCA/LCI</strong>
+                                        <div style={{fontSize: '0.85rem', color: 'var(--text-secondary-color)', marginBottom: '4px'}}>
+                                            <span style={{color: 'var(--primary-color)', fontWeight: 'bold'}}>{results.effectiveAnnualLCA.toFixed(2)}%</span> a.a.
+                                        </div>
+                                        <div style={{fontSize: '0.85rem', color: 'var(--text-secondary-color)'}}>
+                                            <span style={{color: 'var(--primary-color)', fontWeight: 'bold'}}>{results.effectiveMonthlyLCA.toFixed(2)}%</span> a.m.
+                                        </div>
+                                    </div>
+                                    <div style={{padding: '12px', backgroundColor: 'var(--bg-color)', borderRadius: '6px', border: '1px solid var(--border-color)'}}>
+                                        <strong style={{display: 'block', marginBottom: '8px', color: 'var(--text-color)'}}>CDB/RDC</strong>
+                                        <div style={{fontSize: '0.85rem', color: 'var(--text-secondary-color)', marginBottom: '4px'}}>
+                                            <span style={{color: 'var(--primary-color)', fontWeight: 'bold'}}>{results.effectiveAnnualCDB.toFixed(2)}%</span> a.a.
+                                        </div>
+                                        <div style={{fontSize: '0.85rem', color: 'var(--text-secondary-color)'}}>
+                                            <span style={{color: 'var(--primary-color)', fontWeight: 'bold'}}>{results.effectiveMonthlyCDB.toFixed(2)}%</span> a.m.
+                                        </div>
+                                        <div style={{fontSize: '0.75rem', color: 'var(--text-secondary-color)', marginTop: '6px', fontStyle: 'italic'}}>
+                                            (já livre de IR)
+                                        </div>
+                                    </div>
+                                    <div style={{padding: '12px', backgroundColor: 'var(--bg-color)', borderRadius: '6px', border: '1px solid var(--border-color)'}}>
+                                        <strong style={{display: 'block', marginBottom: '8px', color: 'var(--text-color)'}}>Poupança</strong>
+                                        <div style={{fontSize: '0.85rem', color: 'var(--text-secondary-color)', marginBottom: '4px'}}>
+                                            <span style={{color: 'var(--primary-color)', fontWeight: 'bold'}}>{results.effectiveAnnualPoupanca.toFixed(2)}%</span> a.a.
+                                        </div>
+                                        <div style={{fontSize: '0.85rem', color: 'var(--text-secondary-color)'}}>
+                                            <span style={{color: 'var(--primary-color)', fontWeight: 'bold'}}>{results.effectiveMonthlyPoupanca.toFixed(2)}%</span> a.m.
+                                        </div>
+                                        <div style={{fontSize: '0.75rem', color: 'var(--text-secondary-color)', marginTop: '6px', fontStyle: 'italic'}}>
+                                            (70% da SELIC)
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -2225,16 +2314,18 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                                     <thead>
                                         <tr>
                                             <th>Mês</th>
-                                            <th>Saldo (LCA/LCI)</th>
-                                            <th>Saldo (CDB/RDC)</th>
+                                            <th>LCA/LCI</th>
+                                            <th>CDB/RDC</th>
+                                            <th>Poupança</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {results.tableData.map(row => (
                                             <tr key={row.month}>
                                                 <td data-label="Mês">{row.month}</td>
-                                                <td data-label="Saldo (LCA/LCI)">{formatCurrency(row.balanceLCA)}</td>
-                                                <td data-label="Saldo (CDB/RDC)">{formatCurrency(row.balanceCDB)}</td>
+                                                <td data-label="LCA/LCI">{formatCurrency(row.balanceLCA)}</td>
+                                                <td data-label="CDB/RDC">{formatCurrency(row.balanceCDB)}</td>
+                                                <td data-label="Poupança">{formatCurrency(row.balancePoupanca)}</td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -2278,6 +2369,14 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                                             stroke="var(--primary-color)" 
                                             strokeWidth={2}
                                             name="CDB/RDC"
+                                            dot={false}
+                                        />
+                                        <Line 
+                                            type="monotone" 
+                                            dataKey="balancePoupanca" 
+                                            stroke="#10b981" 
+                                            strokeWidth={2}
+                                            name="Poupança"
                                             dot={false}
                                         />
                                     </LineChart>
@@ -2782,6 +2881,7 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
         let tableData = [];
         let currentBalanceLCA = principal;
         let currentBalanceCDB = principal;
+        let currentBalancePoupanca = principal;
         const cdiByYear = {};
 
         for (let i = 1; i <= numMonths; i++) {
@@ -2803,12 +2903,18 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
 
             const monthlyLcaRate = monthlyBaseRate * lcaProf;
             const monthlyCdbRate = monthlyBaseRate * cdbProf;
+            
+            const selicAnnual = settings.selic / 100;
+            const poupancaMonthlyRate = selicAnnual <= 0.085 ? annualToMonthly(selicAnnual * 0.70) : 0.005;
 
             const interestLCA = currentBalanceLCA * monthlyLcaRate;
             currentBalanceLCA += interestLCA + monthlyAmount;
 
             const interestCDB = currentBalanceCDB * monthlyCdbRate;
             currentBalanceCDB += interestCDB + monthlyAmount;
+            
+            const interestPoupanca = currentBalancePoupanca * poupancaMonthlyRate;
+            currentBalancePoupanca += interestPoupanca + monthlyAmount;
 
             tableData.push({
                 month: i,
@@ -2816,6 +2922,8 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
                 balanceLCA: currentBalanceLCA,
                 interestCDB,
                 balanceCDB: currentBalanceCDB,
+                interestPoupanca,
+                balancePoupanca: currentBalancePoupanca,
                 cdiRate: baseRateAnnual,
                 year: futureYear,
             });
@@ -2823,17 +2931,31 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
         
         const totalInvested = principal + (monthlyAmount * numMonths);
 
-        // LCA final values
         const finalValueLCA = currentBalanceLCA;
         const totalProfitLCA = finalValueLCA - totalInvested;
 
-        // CDB final values
         const finalValueCDBGross = currentBalanceCDB;
         const totalProfitCDBGross = finalValueCDBGross - totalInvested;
         const taxRate = getIncomeTaxRate(numMonths * 30);
         const taxAmount = totalProfitCDBGross * taxRate;
         const finalValueCDBNet = finalValueCDBGross - taxAmount;
         const totalProfitCDBNet = totalProfitCDBGross - taxAmount;
+
+        const finalValuePoupanca = currentBalancePoupanca;
+        const totalProfitPoupanca = finalValuePoupanca - totalInvested;
+
+        const netRateLCA = (totalProfitLCA / totalInvested) * 100;
+        const netRateCDB = (totalProfitCDBNet / totalInvested) * 100;
+        const netRatePoupanca = (totalProfitPoupanca / totalInvested) * 100;
+        
+        const effectiveAnnualLCA = ((finalValueLCA / totalInvested) ** (12 / numMonths) - 1) * 100;
+        const effectiveMonthlyLCA = annualToMonthly(effectiveAnnualLCA / 100) * 100;
+        
+        const effectiveAnnualCDB = ((finalValueCDBNet / totalInvested) ** (12 / numMonths) - 1) * 100;
+        const effectiveMonthlyCDB = annualToMonthly(effectiveAnnualCDB / 100) * 100;
+        
+        const effectiveAnnualPoupanca = ((finalValuePoupanca / totalInvested) ** (12 / numMonths) - 1) * 100;
+        const effectiveMonthlyPoupanca = annualToMonthly(effectiveAnnualPoupanca / 100) * 100;
 
         return {
             principal,
@@ -2842,12 +2964,23 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
             totalInvested,
             finalValueLCA,
             totalProfitLCA,
+            netRateLCA,
+            effectiveAnnualLCA,
+            effectiveMonthlyLCA,
             finalValueCDBGross,
             totalProfitCDBGross,
             taxRate,
             taxAmount,
             finalValueCDBNet,
             totalProfitCDBNet,
+            netRateCDB,
+            effectiveAnnualCDB,
+            effectiveMonthlyCDB,
+            finalValuePoupanca,
+            totalProfitPoupanca,
+            netRatePoupanca,
+            effectiveAnnualPoupanca,
+            effectiveMonthlyPoupanca,
             tableData,
             lcaProfitability: lcaProf,
             cdbProfitability: cdbProf,
@@ -3034,7 +3167,63 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
                                         <p>{formatCurrency(results.totalInvested)}</p>
                                     </div>
                                 </div>
+                                <div>
+                                     <h4>Poupança</h4>
+                                     <div className="summary-item">
+                                        <h4>Valor Final Líquido</h4>
+                                        <p>{formatCurrency(results.finalValuePoupanca)}</p>
+                                    </div>
+                                     <div className="summary-item">
+                                        <h4>Total em Juros</h4>
+                                        <p className="positive">{formatCurrency(results.totalProfitPoupanca)}</p>
+                                    </div>
+                                    <div className="summary-item">
+                                        <h4>Total Investido</h4>
+                                        <p>{formatCurrency(results.totalInvested)}</p>
+                                    </div>
+                                </div>
                            </div>
+                            
+                            <div style={{marginTop: '20px', padding: '15px', backgroundColor: 'var(--card-bg)', borderRadius: '8px', border: '1px solid var(--border-color)'}}>
+                                <h5 style={{margin: '0 0 10px 0', color: 'var(--primary-color)', fontSize: '0.95rem'}}>
+                                    💰 Taxas Líquidas Efetivas (após impostos)
+                                </h5>
+                                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px', marginTop: '15px'}}>
+                                    <div style={{padding: '12px', backgroundColor: 'var(--bg-color)', borderRadius: '6px', border: '1px solid var(--border-color)'}}>
+                                        <strong style={{display: 'block', marginBottom: '8px', color: 'var(--text-color)'}}>LCA/LCI</strong>
+                                        <div style={{fontSize: '0.85rem', color: 'var(--text-secondary-color)', marginBottom: '4px'}}>
+                                            <span style={{color: 'var(--primary-color)', fontWeight: 'bold'}}>{results.effectiveAnnualLCA.toFixed(2)}%</span> a.a.
+                                        </div>
+                                        <div style={{fontSize: '0.85rem', color: 'var(--text-secondary-color)'}}>
+                                            <span style={{color: 'var(--primary-color)', fontWeight: 'bold'}}>{results.effectiveMonthlyLCA.toFixed(2)}%</span> a.m.
+                                        </div>
+                                    </div>
+                                    <div style={{padding: '12px', backgroundColor: 'var(--bg-color)', borderRadius: '6px', border: '1px solid var(--border-color)'}}>
+                                        <strong style={{display: 'block', marginBottom: '8px', color: 'var(--text-color)'}}>CDB/RDC</strong>
+                                        <div style={{fontSize: '0.85rem', color: 'var(--text-secondary-color)', marginBottom: '4px'}}>
+                                            <span style={{color: 'var(--primary-color)', fontWeight: 'bold'}}>{results.effectiveAnnualCDB.toFixed(2)}%</span> a.a.
+                                        </div>
+                                        <div style={{fontSize: '0.85rem', color: 'var(--text-secondary-color)'}}>
+                                            <span style={{color: 'var(--primary-color)', fontWeight: 'bold'}}>{results.effectiveMonthlyCDB.toFixed(2)}%</span> a.m.
+                                        </div>
+                                        <div style={{fontSize: '0.75rem', color: 'var(--text-secondary-color)', marginTop: '6px', fontStyle: 'italic'}}>
+                                            (já livre de IR)
+                                        </div>
+                                    </div>
+                                    <div style={{padding: '12px', backgroundColor: 'var(--bg-color)', borderRadius: '6px', border: '1px solid var(--border-color)'}}>
+                                        <strong style={{display: 'block', marginBottom: '8px', color: 'var(--text-color)'}}>Poupança</strong>
+                                        <div style={{fontSize: '0.85rem', color: 'var(--text-secondary-color)', marginBottom: '4px'}}>
+                                            <span style={{color: 'var(--primary-color)', fontWeight: 'bold'}}>{results.effectiveAnnualPoupanca.toFixed(2)}%</span> a.a.
+                                        </div>
+                                        <div style={{fontSize: '0.85rem', color: 'var(--text-secondary-color)'}}>
+                                            <span style={{color: 'var(--primary-color)', fontWeight: 'bold'}}>{results.effectiveMonthlyPoupanca.toFixed(2)}%</span> a.m.
+                                        </div>
+                                        <div style={{fontSize: '0.75rem', color: 'var(--text-secondary-color)', marginTop: '6px', fontStyle: 'italic'}}>
+                                            (70% da SELIC)
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             
                             {results.cdiByYear && (
                                 <div style={{marginTop: '20px', padding: '15px', backgroundColor: 'var(--card-bg)', borderRadius: '8px', border: '1px solid var(--border-color)'}}>
