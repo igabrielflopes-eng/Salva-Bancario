@@ -10,6 +10,7 @@ import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { Share } from '@capacitor/share';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { SplashScreen } from '@capacitor/splash-screen';
+import { App as CapacitorApp } from '@capacitor/app';
 
 const styles = `
   :root { /* Light Theme */
@@ -5484,6 +5485,65 @@ const App = () => {
         
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [currentView]);
+    
+    useEffect(() => {
+        if (!Capacitor.isNativePlatform()) return;
+        
+        const backButtonListener = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+            if (currentView !== 'main') {
+                setCurrentView('main');
+                toast('Voltando ao menu principal...', { icon: '🏠' });
+            } else {
+                toast((t) => (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div>
+                            <strong>Sair do Salva Bancário?</strong>
+                            <p style={{ margin: '5px 0' }}>Deseja realmente fechar o aplicativo?</p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={() => toast.dismiss(t.id)}
+                                style={{
+                                    padding: '8px 16px',
+                                    background: 'var(--primary-color)',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '5px',
+                                    cursor: 'pointer',
+                                    fontWeight: '500'
+                                }}
+                            >
+                                Continuar no App
+                            </button>
+                            <button
+                                onClick={() => {
+                                    toast.dismiss(t.id);
+                                    CapacitorApp.exitApp();
+                                }}
+                                style={{
+                                    padding: '8px 16px',
+                                    background: 'var(--border-color)',
+                                    color: 'var(--text-color)',
+                                    border: 'none',
+                                    borderRadius: '5px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Sair
+                            </button>
+                        </div>
+                    </div>
+                ), {
+                    duration: 5000,
+                    icon: '👋'
+                });
+            }
+        });
+        
+        return () => {
+            backButtonListener.remove();
+        };
     }, [currentView]);
 
 
