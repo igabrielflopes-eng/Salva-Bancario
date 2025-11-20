@@ -5,6 +5,11 @@ import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as
 import toast, { Toaster } from 'react-hot-toast';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { Capacitor } from '@capacitor/core';
+import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { Share } from '@capacitor/share';
+import { StatusBar, Style } from '@capacitor/status-bar';
+import { SplashScreen } from '@capacitor/splash-screen';
 
 const styles = `
   :root { /* Light Theme */
@@ -1437,6 +1442,54 @@ const calculateIOF = (principal, months, iofAdicionalRate = 0.0038, iofDiarioRat
   };
 };
 
+// --- CAPACITOR NATIVE FEATURES ---
+const triggerHapticFeedback = async (style = ImpactStyle.Medium) => {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await Haptics.impact({ style });
+    } catch (error) {
+      console.log('Haptic feedback not available:', error);
+    }
+  }
+};
+
+const shareNative = async (title, text, url = null) => {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await Share.share({
+        title,
+        text,
+        url,
+        dialogTitle: 'Compartilhar simulação'
+      });
+      return true;
+    } catch (error) {
+      console.log('Native share not available:', error);
+      return false;
+    }
+  }
+  return false;
+};
+
+const initializeNativeFeatures = async () => {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await SplashScreen.hide();
+      
+      const theme = localStorage.getItem('theme') || 'light';
+      if (theme === 'dark') {
+        await StatusBar.setStyle({ style: Style.Dark });
+      } else {
+        await StatusBar.setStyle({ style: Style.Light });
+      }
+      
+      await StatusBar.setBackgroundColor({ color: '#2563eb' });
+    } catch (error) {
+      console.log('Error initializing native features:', error);
+    }
+  }
+};
+
 // --- PDF EXPORT ---
 const exportToPDF = async (simulationType, data) => {
     console.log('[PDF Export Global] Iniciando exportação de:', simulationType);
@@ -1611,15 +1664,23 @@ const exportToCSV = (data, filename = 'export.csv') => {
 };
 
 // --- SHARE FUNCTIONALITY ---
-const shareSimulation = (simulationData, simulationType) => {
+const shareSimulation = async (simulationData, simulationType) => {
     try {
         const encodedData = btoa(JSON.stringify(simulationData));
         const baseUrl = window.location.origin + window.location.pathname;
         const shareUrl = `${baseUrl}?simulation=${encodedData}`;
+        const shareText = `Confira minha simulação ${simulationType}`;
+        
+        const nativeShared = await shareNative(shareText, shareText, shareUrl);
+        
+        if (nativeShared) {
+            await triggerHapticFeedback(ImpactStyle.Light);
+            return { shared: true };
+        }
         
         return {
             url: shareUrl,
-            whatsappUrl: `https://wa.me/?text=${encodeURIComponent(`Confira minha simulação ${simulationType}: ${shareUrl}`)}`
+            whatsappUrl: `https://wa.me/?text=${encodeURIComponent(`${shareText}: ${shareUrl}`)}`
         };
     } catch (error) {
         console.error('Erro ao gerar link de compartilhamento:', error);
@@ -5349,6 +5410,14 @@ const App = () => {
     useEffect(() => {
         document.body.setAttribute('data-theme', theme);
         localStorage.setItem('theme', theme);
+        
+        if (Capacitor.isNativePlatform()) {
+            if (theme === 'dark') {
+                StatusBar.setStyle({ style: Style.Dark });
+            } else {
+                StatusBar.setStyle({ style: Style.Light });
+            }
+        }
     }, [theme]);
     
      useEffect(() => {
@@ -5363,6 +5432,8 @@ const App = () => {
     }, [currentView]);
     
     useEffect(() => {
+        initializeNativeFeatures();
+        
         const tutorialCompleted = localStorage.getItem('tutorialCompleted');
         if (!tutorialCompleted) {
             setTimeout(() => setShowTutorial(true), 1000);
@@ -5416,12 +5487,14 @@ const App = () => {
     }, [currentView]);
 
 
-    const handleSaveSimulation = (simulationData) => {
+    const handleSaveSimulation = async (simulationData) => {
         const newSimulation = {
             id: Date.now(),
             ...simulationData
         };
         setHistory(prev => [newSimulation, ...prev]);
+        
+        await triggerHapticFeedback(ImpactStyle.Medium);
         toast.success("Simulação salva com sucesso!");
     };
     
