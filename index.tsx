@@ -5388,6 +5388,7 @@ const MainMenu = ({ setView }) => {
 
 const App = () => {
     const [currentView, setCurrentView] = useState('main');
+    const currentViewRef = useRef('main');
     const [history, setHistory] = useState(() => {
         try {
             const saved = localStorage.getItem('simulationHistory');
@@ -5488,10 +5489,14 @@ const App = () => {
     }, [currentView]);
     
     useEffect(() => {
+        currentViewRef.current = currentView;
+    }, [currentView]);
+    
+    useEffect(() => {
         if (!Capacitor.isNativePlatform()) return;
         
-        const backButtonListener = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
-            if (currentView !== 'main') {
+        const listenerPromise = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+            if (currentViewRef.current !== 'main') {
                 setCurrentView('main');
                 toast('Voltando ao menu principal...', { icon: '🏠' });
             } else {
@@ -5542,9 +5547,13 @@ const App = () => {
         });
         
         return () => {
-            backButtonListener.remove();
+            listenerPromise.then(listener => {
+                listener.remove();
+            }).catch(error => {
+                console.error('Error removing backButton listener:', error);
+            });
         };
-    }, [currentView]);
+    }, []);
 
 
     const handleSaveSimulation = async (simulationData) => {
