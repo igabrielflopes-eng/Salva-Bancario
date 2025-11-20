@@ -2242,17 +2242,17 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                                 }, 'investimento.csv')}>📊 Exportar CSV</button>
                             </div>
                             <div className="share-buttons">
-                                <button className="btn btn-secondary" onClick={() => {
-                                    const shareData = shareSimulation(results, 'Simulação de Investimento');
-                                    if (shareData) {
+                                <button className="btn btn-secondary" onClick={async () => {
+                                    const shareData = await shareSimulation(results, 'Simulação de Investimento');
+                                    if (shareData && !shareData.shared && shareData.whatsappUrl) {
                                         window.open(shareData.whatsappUrl, '_blank');
                                     }
                                 }}>
                                     💬 Compartilhar no WhatsApp
                                 </button>
-                                <button className="btn btn-secondary" onClick={() => {
-                                    const shareData = shareSimulation(results, 'Simulação de Investimento');
-                                    if (shareData) {
+                                <button className="btn btn-secondary" onClick={async () => {
+                                    const shareData = await shareSimulation(results, 'Simulação de Investimento');
+                                    if (shareData && !shareData.shared && shareData.url) {
                                         copyToClipboard(shareData.url);
                                     }
                                 }}>
@@ -2804,17 +2804,17 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
                                 }, 'emprestimo.csv')}>📊 Exportar CSV</button>
                             </div>
                             <div className="share-buttons">
-                                <button className="btn btn-secondary" onClick={() => {
-                                    const shareData = shareSimulation(results, 'Simulação de Empréstimo');
-                                    if (shareData) {
+                                <button className="btn btn-secondary" onClick={async () => {
+                                    const shareData = await shareSimulation(results, 'Simulação de Empréstimo');
+                                    if (shareData && !shareData.shared) {
                                         window.open(shareData.whatsappUrl, '_blank');
                                     }
                                 }}>
                                     💬 Compartilhar no WhatsApp
                                 </button>
-                                <button className="btn btn-secondary" onClick={() => {
-                                    const shareData = shareSimulation(results, 'Simulação de Empréstimo');
-                                    if (shareData) {
+                                <button className="btn btn-secondary" onClick={async () => {
+                                    const shareData = await shareSimulation(results, 'Simulação de Empréstimo');
+                                    if (shareData && !shareData.shared) {
                                         copyToClipboard(shareData.url);
                                     }
                                 }}>
@@ -3201,9 +3201,9 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
                                     formatCurrency(row.balanceCDB)
                                 ])
                             }, 'aplicacao-programada.csv')}>📊 Exportar CSV</button>
-                            <button className="btn btn-secondary" onClick={() => {
-                                const shareData = shareSimulation(results, 'Aplicação Programada');
-                                if (shareData) {
+                            <button className="btn btn-secondary" onClick={async () => {
+                                const shareData = await shareSimulation(results, 'Aplicação Programada');
+                                if (shareData && !shareData.shared) {
                                     window.open(shareData.whatsappUrl, '_blank');
                                 }
                             }}>
@@ -3484,9 +3484,9 @@ const CompetitorRateFinder = ({ onSave }) => {
                                     ['Taxa Anual Equivalente', formatPercentage(Math.pow(1 + results.calculatedRate, 12) - 1)]
                                 ]
                             }, 'taxa-concorrente.csv')}>📊 Exportar CSV</button>
-                            <button className="btn btn-secondary" onClick={() => {
-                                const shareData = shareSimulation(results, 'Taxa do Concorrente');
-                                if (shareData) {
+                            <button className="btn btn-secondary" onClick={async () => {
+                                const shareData = await shareSimulation(results, 'Taxa do Concorrente');
+                                if (shareData && !shareData.shared) {
                                     window.open(shareData.whatsappUrl, '_blank');
                                 }
                             }}>
@@ -3768,9 +3768,9 @@ const RuralCreditSimulator = ({ onSave }) => {
                                     formatCurrency(row.balance)
                                 ])
                             }, 'credito-rural.csv')}>📊 Exportar CSV</button>
-                            <button className="btn btn-secondary" onClick={() => {
-                                const shareData = shareSimulation(results, 'Crédito Rural');
-                                if (shareData) {
+                            <button className="btn btn-secondary" onClick={async () => {
+                                const shareData = await shareSimulation(results, 'Crédito Rural');
+                                if (shareData && !shareData.shared) {
                                     window.open(shareData.whatsappUrl, '_blank');
                                 }
                             }}>
@@ -4046,9 +4046,9 @@ const ReceivablesDiscountSimulator = ({ onSave }) => {
                                     formatCurrency(r.netValue)
                                 ])
                             }, 'desconto-recebiveis.csv')}>📊 Exportar CSV</button>
-                            <button className="btn btn-secondary" onClick={() => {
-                                const shareData = shareSimulation(results, 'Desconto de Recebíveis');
-                                if (shareData) {
+                            <button className="btn btn-secondary" onClick={async () => {
+                                const shareData = await shareSimulation(results, 'Desconto de Recebíveis');
+                                if (shareData && !shareData.shared) {
                                     window.open(shareData.whatsappUrl, '_blank');
                                 }
                             }}>
@@ -5179,9 +5179,9 @@ const InterestRateConverter = () => {
                                         ['Taxa Anual Equivalente', `${formatPercentage(results.yearlyCompound)} a.a.`]
                                     ]
                                 }, 'conversao-taxas.csv')}>📊 Exportar CSV</button>
-                                <button className="btn btn-secondary" onClick={() => {
-                                    const shareData = shareSimulation(results, 'Conversão de Taxas');
-                                    if (shareData) {
+                                <button className="btn btn-secondary" onClick={async () => {
+                                    const shareData = await shareSimulation(results, 'Conversão de Taxas');
+                                    if (shareData && !shareData.shared) {
                                         window.open(shareData.whatsappUrl, '_blank');
                                     }
                                 }}>
