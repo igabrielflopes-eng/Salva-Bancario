@@ -79,18 +79,26 @@ The application uses a limited BACEN integration via the "Atualizar via BACEN" b
 
 ## Recent Changes
 
-### November 20, 2025 - Capacitor Native Mobile Integration
+### November 21, 2025 - Capacitor Native Mobile Integration
 - **Capacitor Installation**: Added @capacitor/core, @capacitor/cli, @capacitor/android, @capacitor/ios to project dependencies
 - **Native Plugins Integrated**: 
   - @capacitor/app (v7.1.0) - Hardware back button navigation for Android
+  - @capacitor/filesystem (v7.1.4) - File storage and sharing on native devices
   - @capacitor/haptics (v7.0.2) - Haptic feedback on simulation saves
   - @capacitor/share (v7.0.2) - Native share menu for all simulators
   - @capacitor/status-bar (v7.0.3) - Adaptive status bar theming
   - @capacitor/splash-screen (v7.0.3) - Branded launch experience
 - **Android Back Button Integration**: Implemented native back button listener that navigates within app (returns to menu from simulators) and shows exit confirmation dialog when at menu. Uses optimized ref-based pattern to avoid listener churn
+- **Hybrid PDF/CSV Export**: Completely refactored exportToPDF() and exportToCSV() functions to work seamlessly in both web (PWA) and native (Android/iOS) environments:
+  - **Web**: Maintains original behavior (window.open/download links)
+  - **Native**: Saves files via Filesystem API to Directory.Cache, obtains shareable URIs via Filesystem.getUri(), and shares via native Share dialog with files array
+  - **PDF**: Base64 encoding with automatic Capacitor decoding (no encoding parameter)
+  - **CSV**: UTF-8 text encoding (Encoding.UTF8 parameter)
+- **WhatsApp Buttons Removed**: Removed all 7 "Compartilhar no WhatsApp" buttons from simulators (Investimento, Empréstimo, Poupança Programada, Taxa Concorrente, Crédito Rural, Desconto Recebíveis, Conversão de Taxas). Kept only "Copiar Link" button for URL sharing
+- **Tutorial Auto-Start Disabled**: Commented out automatic tutorial activation on first app load to reduce user friction. Tutorial remains accessible via "?" button
 - **Share Function Enhancement**: Updated `shareSimulation()` to async/await pattern with native share fallback. Detects mobile environment and prioritizes native sharing over web URL copying
 - **Fixed All Share Calls**: Corrected 9+ locations across all simulators to properly await async shareSimulation function
-- **Android Platform Ready**: Generated native Android project in `/android/` directory, synced with 5 plugins, ready for .aab generation
+- **Android Platform Ready**: Generated native Android project in `/android/` directory, synced with 6 plugins, ready for .aab generation
 - **Comprehensive Documentation**: Created README-CAPACITOR.md with complete iOS/Android deployment guides, troubleshooting, and app store submission instructions
 - **Build Optimized**: Configured Vite for Capacitor compatibility (base: './', webDir: 'dist'), installed terser for production minification
 - **Production Ready**: 1.09 MB main bundle, fully functional PWA + native app hybrid

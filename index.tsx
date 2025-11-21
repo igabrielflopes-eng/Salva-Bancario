@@ -11,6 +11,7 @@ import { Share } from '@capacitor/share';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { App as CapacitorApp } from '@capacitor/app';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 
 const styles = `
   :root { /* Light Theme */
@@ -1491,12 +1492,12 @@ const initializeNativeFeatures = async () => {
   }
 };
 
-// --- PDF EXPORT ---
+// --- PDF EXPORT (Hybrid: Web + Native) ---
 const exportToPDF = async (simulationType, data) => {
-    console.log('[PDF Export Global] Iniciando exportação de:', simulationType);
+    console.log('[PDF Export] Iniciando exportação de:', simulationType);
     
     try {
-        console.log('[PDF Export Global] Criando documento jsPDF...');
+        console.log('[PDF Export] Criando documento jsPDF...');
         const doc = new jsPDF();
         const pageWidth = doc.internal.pageSize.width;
         const pageHeight = doc.internal.pageSize.height;
@@ -1508,7 +1509,7 @@ const exportToPDF = async (simulationType, data) => {
         // Adicionar logo se fornecida
         if (logoUrl) {
             try {
-                console.log('[PDF Export Global] Carregando logo...');
+                console.log('[PDF Export] Carregando logo...');
                 const img = new Image();
                 img.crossOrigin = 'Anonymous';
                 await new Promise((resolve, reject) => {
@@ -1517,10 +1518,7 @@ const exportToPDF = async (simulationType, data) => {
                     img.src = logoUrl;
                 });
                 
-                // Detectar formato da imagem (PNG, JPG, JPEG)
                 let imageFormat = 'PNG';
-                
-                // Se for data URL, extrair MIME type
                 const dataUrlMatch = logoUrl.match(/^data:(image\/(\w+));/);
                 if (dataUrlMatch) {
                     const mimeType = dataUrlMatch[2].toLowerCase();
@@ -1530,7 +1528,6 @@ const exportToPDF = async (simulationType, data) => {
                         imageFormat = 'PNG';
                     }
                 } else {
-                    // Se for URL externa, detectar pela extensão
                     const ext = logoUrl.toLowerCase().split('.').pop()?.split('?')[0];
                     if (ext === 'jpg' || ext === 'jpeg') {
                         imageFormat = 'JPEG';
@@ -1539,17 +1536,15 @@ const exportToPDF = async (simulationType, data) => {
                     }
                 }
                 
-                // Adicionar logo no canto superior direito (20x20)
                 const logoSize = 20;
                 doc.addImage(img, imageFormat, pageWidth - logoSize - 10, 10, logoSize, logoSize);
-                console.log('[PDF Export Global] Logo adicionada com sucesso! Formato:', imageFormat);
+                console.log('[PDF Export] Logo adicionada com sucesso!');
             } catch (error) {
-                console.warn('[PDF Export Global] Erro ao carregar logo:', error);
-                toast.error('Não foi possível carregar a logo. Verifique a URL nas configurações.');
+                console.warn('[PDF Export] Erro ao carregar logo:', error);
             }
         }
         
-        console.log('[PDF Export Global] Adicionando cabeçalho...');
+        console.log('[PDF Export] Adicionando cabeçalho...');
         doc.setFontSize(18);
         doc.setTextColor(0, 90, 156);
         doc.text('Salva Bancário', pageWidth / 2, 20, { align: 'center' });
@@ -1565,7 +1560,7 @@ const exportToPDF = async (simulationType, data) => {
         let yPosition = 50;
         
         if (data && data.summary && data.summary.length > 0) {
-            console.log('[PDF Export Global] Adicionando resumo...');
+            console.log('[PDF Export] Adicionando resumo...');
             doc.setFontSize(12);
             doc.setTextColor(0, 90, 156);
             doc.text('Resumo:', 14, yPosition);
@@ -1581,7 +1576,7 @@ const exportToPDF = async (simulationType, data) => {
         }
         
         if (data && data.table && data.table.headers && data.table.rows) {
-            console.log('[PDF Export Global] Adicionando tabela...');
+            console.log('[PDF Export] Adicionando tabela...');
             autoTable(doc, {
                 startY: yPosition,
                 head: [data.table.headers],
@@ -1593,43 +1588,76 @@ const exportToPDF = async (simulationType, data) => {
         }
         
         if (companyName) {
-            console.log('[PDF Export Global] Adicionando marca d\'água (empresa)...');
+            console.log('[PDF Export] Adicionando marca d\'água...');
             doc.setFontSize(10);
             doc.setTextColor(102, 102, 102);
             doc.text(companyName, pageWidth / 2, pageHeight - 10, { align: 'center' });
         }
         
-        console.log('[PDF Export Global] Salvando arquivo...');
+        console.log('[PDF Export] Finalizando arquivo...');
         
-        // Solução para iframe/Replit: usar blob + window.open
-        const blob = doc.output('blob');
-        const url = URL.createObjectURL(blob);
-        const newWindow = window.open(url, '_blank');
-        
-        // Fallback se popup blocker ativar
-        if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-            console.log('[PDF Export Global] Popup bloqueado, usando link de download...');
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = `${simulationType.replace(/ /g, '_')}_${Date.now()}.pdf`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+        // AMBIENTE NATIVO (Android/iOS)
+        if (Capacitor.isNativePlatform()) {
+            console.log('[PDF Export] Ambiente nativo detectado');
+            const pdfBase64 = doc.output('datauristring').split(',')[1];
+            const fileName = `${simulationType.replace(/ /g, '_')}_${Date.now()}.pdf`;
+            
+            // Para binários (PDF), OMITIR encoding - Capacitor decodifica base64 automaticamente
+            await Filesystem.writeFile({
+                path: fileName,
+                data: pdfBase64,
+                directory: Directory.Cache
+            });
+            
+            // Obter URI compartilhável
+            const uriResult = await Filesystem.getUri({
+                directory: Directory.Cache,
+                path: fileName
+            });
+            
+            console.log('[PDF Export] Arquivo salvo:', uriResult.uri);
+            
+            // Compartilhar com files e url para melhor compatibilidade multiplataforma
+            await Share.share({
+                files: [uriResult.uri],
+                url: uriResult.uri,
+                title: simulationType,
+                text: `Relatório: ${simulationType}`,
+                dialogTitle: 'Compartilhar PDF'
+            });
+            
+            toast.success('PDF compartilhado com sucesso!');
+        } 
+        // AMBIENTE WEB (PWA/Navegador)
+        else {
+            console.log('[PDF Export] Ambiente web detectado');
+            const blob = doc.output('blob');
+            const url = URL.createObjectURL(blob);
+            const newWindow = window.open(url, '_blank');
+            
+            if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+                console.log('[PDF Export] Popup bloqueado, usando download...');
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `${simulationType.replace(/ /g, '_')}_${Date.now()}.pdf`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+            
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            toast.success('PDF aberto em nova aba!');
         }
         
-        // Liberar memória após um pequeno delay (tanto para sucesso quanto fallback)
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-        
-        console.log('[PDF Export Global] PDF exportado com sucesso!');
-        toast.success('PDF aberto em nova aba! Use Ctrl+S ou o botão de download do navegador.');
+        console.log('[PDF Export] Exportação concluída com sucesso!');
     } catch (error) {
-        console.error('[PDF Export Global] Erro ao exportar PDF:', error);
+        console.error('[PDF Export] Erro:', error);
         toast.error('Erro ao exportar PDF: ' + error.message);
     }
 };
 
-// --- CSV EXPORT ---
-const exportToCSV = (data, filename = 'export.csv') => {
+// --- CSV EXPORT (Hybrid: Web + Native) ---
+const exportToCSV = async (data, filename = 'export.csv') => {
     try {
         const { headers, rows } = data;
         
@@ -1645,21 +1673,57 @@ const exportToCSV = (data, filename = 'export.csv') => {
         ].join('\n');
         
         const BOM = '\uFEFF';
-        const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
         
-        link.setAttribute('href', url);
-        link.setAttribute('download', filename);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        URL.revokeObjectURL(url);
-        toast.success('CSV exportado com sucesso!');
+        // AMBIENTE NATIVO (Android/iOS)
+        if (Capacitor.isNativePlatform()) {
+            console.log('[CSV Export] Ambiente nativo detectado');
+            
+            // Para texto (CSV), usar UTF8 encoding com texto direto (não base64)
+            await Filesystem.writeFile({
+                path: filename,
+                data: BOM + csvContent,
+                directory: Directory.Cache,
+                encoding: Encoding.UTF8
+            });
+            
+            // Obter URI compartilhável
+            const uriResult = await Filesystem.getUri({
+                directory: Directory.Cache,
+                path: filename
+            });
+            
+            console.log('[CSV Export] Arquivo salvo:', uriResult.uri);
+            
+            // Compartilhar com files e url para melhor compatibilidade multiplataforma
+            await Share.share({
+                files: [uriResult.uri],
+                url: uriResult.uri,
+                title: 'Exportar CSV',
+                text: `Planilha: ${filename}`,
+                dialogTitle: 'Compartilhar CSV'
+            });
+            
+            toast.success('CSV compartilhado com sucesso!');
+        } 
+        // AMBIENTE WEB (PWA/Navegador)
+        else {
+            console.log('[CSV Export] Ambiente web detectado');
+            const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            URL.revokeObjectURL(url);
+            toast.success('CSV exportado com sucesso!');
+        }
     } catch (error) {
-        console.error('Erro ao exportar CSV:', error);
+        console.error('[CSV Export] Erro:', error);
         toast.error('Erro ao exportar CSV: ' + error.message);
     }
 };
@@ -2245,14 +2309,6 @@ const InvestmentSimulator = ({ onSave, cdiRate }) => {
                             <div className="share-buttons">
                                 <button className="btn btn-secondary" onClick={async () => {
                                     const shareData = await shareSimulation(results, 'Simulação de Investimento');
-                                    if (shareData && !shareData.shared && shareData.whatsappUrl) {
-                                        window.open(shareData.whatsappUrl, '_blank');
-                                    }
-                                }}>
-                                    💬 Compartilhar no WhatsApp
-                                </button>
-                                <button className="btn btn-secondary" onClick={async () => {
-                                    const shareData = await shareSimulation(results, 'Simulação de Investimento');
                                     if (shareData && !shareData.shared && shareData.url) {
                                         copyToClipboard(shareData.url);
                                     }
@@ -2808,14 +2864,6 @@ const LoanSimulator = ({ onSave, isPostFixed, cdiRate }) => {
                                 <button className="btn btn-secondary" onClick={async () => {
                                     const shareData = await shareSimulation(results, 'Simulação de Empréstimo');
                                     if (shareData && !shareData.shared) {
-                                        window.open(shareData.whatsappUrl, '_blank');
-                                    }
-                                }}>
-                                    💬 Compartilhar no WhatsApp
-                                </button>
-                                <button className="btn btn-secondary" onClick={async () => {
-                                    const shareData = await shareSimulation(results, 'Simulação de Empréstimo');
-                                    if (shareData && !shareData.shared) {
                                         copyToClipboard(shareData.url);
                                     }
                                 }}>
@@ -3202,14 +3250,6 @@ const ScheduledApplicationCalculator = ({ onSave, cdiRate }) => {
                                     formatCurrency(row.balanceCDB)
                                 ])
                             }, 'aplicacao-programada.csv')}>📊 Exportar CSV</button>
-                            <button className="btn btn-secondary" onClick={async () => {
-                                const shareData = await shareSimulation(results, 'Aplicação Programada');
-                                if (shareData && !shareData.shared) {
-                                    window.open(shareData.whatsappUrl, '_blank');
-                                }
-                            }}>
-                                💬 Compartilhar no WhatsApp
-                            </button>
                         </div>
                     )}
                 </div>
@@ -3485,14 +3525,6 @@ const CompetitorRateFinder = ({ onSave }) => {
                                     ['Taxa Anual Equivalente', formatPercentage(Math.pow(1 + results.calculatedRate, 12) - 1)]
                                 ]
                             }, 'taxa-concorrente.csv')}>📊 Exportar CSV</button>
-                            <button className="btn btn-secondary" onClick={async () => {
-                                const shareData = await shareSimulation(results, 'Taxa do Concorrente');
-                                if (shareData && !shareData.shared) {
-                                    window.open(shareData.whatsappUrl, '_blank');
-                                }
-                            }}>
-                                💬 Compartilhar no WhatsApp
-                            </button>
                         </div>
                     )}
                 </div>
@@ -3769,14 +3801,6 @@ const RuralCreditSimulator = ({ onSave }) => {
                                     formatCurrency(row.balance)
                                 ])
                             }, 'credito-rural.csv')}>📊 Exportar CSV</button>
-                            <button className="btn btn-secondary" onClick={async () => {
-                                const shareData = await shareSimulation(results, 'Crédito Rural');
-                                if (shareData && !shareData.shared) {
-                                    window.open(shareData.whatsappUrl, '_blank');
-                                }
-                            }}>
-                                💬 Compartilhar no WhatsApp
-                            </button>
                         </div>
                     )}
                 </div>
@@ -4047,14 +4071,6 @@ const ReceivablesDiscountSimulator = ({ onSave }) => {
                                     formatCurrency(r.netValue)
                                 ])
                             }, 'desconto-recebiveis.csv')}>📊 Exportar CSV</button>
-                            <button className="btn btn-secondary" onClick={async () => {
-                                const shareData = await shareSimulation(results, 'Desconto de Recebíveis');
-                                if (shareData && !shareData.shared) {
-                                    window.open(shareData.whatsappUrl, '_blank');
-                                }
-                            }}>
-                                💬 Compartilhar no WhatsApp
-                            </button>
                         </div>
                     )}
                 </div>
@@ -5180,14 +5196,6 @@ const InterestRateConverter = () => {
                                         ['Taxa Anual Equivalente', `${formatPercentage(results.yearlyCompound)} a.a.`]
                                     ]
                                 }, 'conversao-taxas.csv')}>📊 Exportar CSV</button>
-                                <button className="btn btn-secondary" onClick={async () => {
-                                    const shareData = await shareSimulation(results, 'Conversão de Taxas');
-                                    if (shareData && !shareData.shared) {
-                                        window.open(shareData.whatsappUrl, '_blank');
-                                    }
-                                }}>
-                                    💬 Compartilhar no WhatsApp
-                                </button>
                             </div>
                         </>
                     )}
@@ -5436,10 +5444,11 @@ const App = () => {
     useEffect(() => {
         initializeNativeFeatures();
         
-        const tutorialCompleted = localStorage.getItem('tutorialCompleted');
-        if (!tutorialCompleted) {
-            setTimeout(() => setShowTutorial(true), 1000);
-        }
+        // Tutorial desabilitado por padrão
+        // const tutorialCompleted = localStorage.getItem('tutorialCompleted');
+        // if (!tutorialCompleted) {
+        //     setTimeout(() => setShowTutorial(true), 1000);
+        // }
     }, []);
     
     useEffect(() => {
